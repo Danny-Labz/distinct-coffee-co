@@ -1,0 +1,8 @@
+{
+  "name": "distinct-coffee-co",
+  "version": "1.0.0",
+  "description": "Distinct. Coffee Co. — website + ordering",
+  "dependencies": {
+    "stripe": "^14.0.0"
+  }
+}

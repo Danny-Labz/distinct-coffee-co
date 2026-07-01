@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Confirmed — Distinct. Coffee Co.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --black: #0a0a0a; --white: #f8f6f2; --off-white: #eeebe5; --mid: #c8c3bb; }
+
+    body {
+      background: var(--white);
+      color: var(--black);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+    }
+
+    .card {
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+
+    /* CHECK ICON */
+    .check {
+      width: 56px;
+      height: 56px;
+      background: var(--black);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+    }
+
+    .eyebrow {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--mid);
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: clamp(26px, 5vw, 38px);
+      font-weight: 200;
+      letter-spacing: -0.3px;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+
+    .desc {
+      font-size: 12.5px;
+      line-height: 1.85;
+      color: #666;
+      margin-bottom: 36px;
+    }
+
+    /* PICKUP PIN */
+    .pin-block {
+      background: var(--black);
+      color: var(--white);
+      border-radius: 4px;
+      padding: 32px 28px 28px;
+      margin-bottom: 20px;
+    }
+    .pin-label {
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 3.5px;
+      text-transform: uppercase;
+      color: rgba(248,246,242,0.4);
+      margin-bottom: 16px;
+    }
+    .pin-digits {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .pin-digit {
+      width: 64px;
+      height: 80px;
+      background: rgba(248,246,242,0.08);
+      border: 1px solid rgba(248,246,242,0.12);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      font-weight: 600;
+      letter-spacing: 0;
+      color: var(--white);
+    }
+    .pin-instruction {
+      font-size: 10px;
+      font-weight: 400;
+      color: rgba(248,246,242,0.45);
+      letter-spacing: 0.5px;
+      line-height: 1.7;
+    }
+
+    /* ORDER DETAILS */
+    .details-box {
+      background: var(--off-white);
+      border-radius: 2px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(10,10,10,0.06);
+      gap: 16px;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label {
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--mid);
+      flex-shrink: 0;
+    }
+    .detail-value {
+      font-size: 11.5px;
+      font-weight: 400;
+      color: var(--black);
+      text-align: right;
+    }
+
+    /* PAYMENT BADGE */
+    .payment-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border-radius: 2px;
+      margin-bottom: 24px;
+    }
+    .payment-badge.paid {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .payment-badge.reserved {
+      background: #fff8e1;
+      color: #f57f17;
+    }
+
+    /* ACTIONS */
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      padding: 13px 28px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: 2px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: var(--black); color: var(--white); }
+    .btn-primary:hover { background: #222; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--black);
+      border: 1px solid rgba(10,10,10,0.2);
+    }
+    .btn-ghost:hover { background: var(--off-white); }
+
+    .note {
+      font-size: 10px;
+      color: var(--mid);
+      letter-spacing: 0.5px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 400px) {
+      .pin-digit { width: 52px; height: 68px; font-size: 28px; }
+      .actions { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+
+    <div class="check">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+
+    <div class="eyebrow" id="eyebrow">Order Confirmed</div>
+    <h1 id="headline">See you at the event.</h1>
+    <p class="desc" id="desc">Your order is locked in. Show your pickup PIN when you arrive and we'll have it ready for you.</p>
+
+    <!-- PICKUP PIN -->
+    <div class="pin-block">
+      <div class="pin-label">Your Pickup PIN</div>
+      <div class="pin-digits" id="pin-digits">
+        <div class="pin-digit">—</div>
+        <div class="pin-digit">—</div>
+        <div class="pin-digit">—</div>
+        <div class="pin-digit">—</div>
+      </div>
+      <div class="pin-instruction" id="pin-instruction">
+        Show this screen when you arrive at your pickup window.<br>
+        Your PIN identifies your order — no receipt needed.
+      </div>
+    </div>
+
+    <!-- PAYMENT STATUS BADGE -->
+    <div id="payment-badge-wrap"></div>
+
+    <!-- ORDER DETAILS -->
+    <div class="details-box">
+      <div class="detail-row">
+        <span class="detail-label">Name</span>
+        <span class="detail-value" id="det-name">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Pickup</span>
+        <span class="detail-value" id="det-pickup">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Event</span>
+        <span class="detail-value" id="det-event">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Total</span>
+        <span class="detail-value" id="det-total">—</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="window.print()">Save / Print</button>
+      <a href="index.html" class="btn btn-primary">Back to Home</a>
+    </div>
+
+    <p class="note">Questions? <a href="mailto:Danny@DistinctCoffeeCo.com" style="color:inherit;">Danny@DistinctCoffeeCo.com</a></p>
+
+  </div>
+
+  <script>
+    const SUPABASE_URL      = 'https://qjsitqvfimwiuoojsoge.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqc2l0cXZmaW13aXVvb2pzb2dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MzAwNzUsImV4cCI6MjA5ODUwNjA3NX0.p2qXO5-Z6uWd7n7slhHJT_s2NDvjRlsOMQLqCRxFIcU';
+
+    // Generate a clean 4-digit PIN from UUID
+    function generatePin(uuid) {
+      // Use characters from the UUID to derive a stable 4-digit number
+      const hex = uuid.replace(/-/g, '');
+      const num = parseInt(hex.slice(0, 8), 16);
+      const pin = String((num % 9000) + 1000); // always 4 digits, 1000–9999
+      return pin.split('');
+    }
+
+    async function loadOrder() {
+      const params    = new URLSearchParams(window.location.search);
+      const orderId   = params.get('order_id');
+      const method    = params.get('method');
+
+      if (!orderId) return;
+
+      // Generate and display PIN immediately
+      const pinDigits = generatePin(orderId);
+      const pinEl     = document.getElementById('pin-digits');
+      pinEl.innerHTML = pinDigits.map(d => `<div class="pin-digit">${d}</div>`).join('');
+
+      // Adjust messaging for pay-at-event
+      if (method === 'pay_at_event') {
+        document.getElementById('eyebrow').textContent      = 'Reservation Confirmed';
+        document.getElementById('headline').textContent     = 'Order reserved.';
+        document.getElementById('desc').textContent         = 'No payment taken yet. Show your PIN at pickup and pay by cash or card on the day.';
+        document.getElementById('pin-instruction').innerHTML = 'Show this screen at your pickup window.<br>Pay by cash or card when you collect.';
+
+        document.getElementById('payment-badge-wrap').innerHTML =
+          '<div class="payment-badge reserved">⏳ Pay at Event</div>';
+      } else {
+        document.getElementById('payment-badge-wrap').innerHTML =
+          '<div class="payment-badge paid">✓ Payment Confirmed</div>';
+      }
+
+      // Fetch order details from Supabase to populate summary
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=customer_name,pickup_time,event_name,event_date,total_cents`,
+          {
+            headers: {
+              'apikey':        SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            }
+          }
+        );
+        if (!res.ok) return;
+        const [order] = await res.json();
+        if (!order) return;
+
+        document.getElementById('det-name').textContent   = order.customer_name || '—';
+        document.getElementById('det-pickup').textContent = order.pickup_time   || '—';
+        document.getElementById('det-event').textContent  = `${order.event_name} · ${order.event_date}`;
+        document.getElementById('det-total').textContent  = order.total_cents
+          ? `$${(order.total_cents / 100).toFixed(2)}`
+          : '—';
+
+        // Save PIN back to Supabase on the order record
+        const pin = pinDigits.join('');
+        await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, {
+          method:  'PATCH',
+          headers: {
+            'Content-Type':  'application/json',
+            'apikey':        SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ pickup_pin: pin }),
+        });
+
+      } catch (err) {
+        console.warn('Could not load order details:', err);
+      }
+    }
+
+    loadOrder();
+  </script>
+</body>
+</html>

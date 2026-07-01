@@ -356,7 +356,64 @@
       to { transform: translateX(-50%); }
     }
 
+    /* ── NEXT EVENT ── */
+    #next-event {
+      background: var(--black);
+      padding: 0 80px;
+    }
+    .next-event-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 36px 0;
+      border-bottom: 1px solid rgba(248,246,242,0.08);
+    }
+    .next-event-label {
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(248,246,242,0.35);
+      margin-bottom: 8px;
+    }
+    .next-event-name {
+      font-size: 20px;
+      font-weight: 200;
+      color: var(--white);
+      letter-spacing: 0.3px;
+      margin-bottom: 8px;
+    }
+    .next-event-meta {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      color: rgba(248,246,242,0.4);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .next-event-divider { opacity: 0.3; }
+    .next-event-btn {
+      flex-shrink: 0;
+      background: var(--white);
+      color: var(--black);
+      text-decoration: none;
+      padding: 14px 28px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: 2px;
+      transition: background 0.25s, transform 0.2s;
+      white-space: nowrap;
+    }
+    .next-event-btn:hover {
+      background: var(--off-white);
+      transform: translateY(-1px);
+    }
+
     /* ── SERVICES ── */
+
     #services {
       padding: 120px 80px;
       background: var(--white);
@@ -922,6 +979,10 @@
       .tagline-socials .venmo-badge {
         opacity: 1;
       }
+      #next-event { padding: 0 28px; }
+      .next-event-inner { flex-direction: column; align-items: flex-start; gap: 20px; padding: 28px 0; }
+      .next-event-meta { flex-wrap: wrap; gap: 6px; }
+      .next-event-btn { width: 100%; text-align: center; }
       #services { padding: 80px 28px; }
       .services-grid { grid-template-columns: 1fr; }
       .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -990,7 +1051,7 @@
           </svg>
         </a>
       </li>
-      <li><a href="#contact" class="nav-cta">Book Now</a></li>
+      <li><a href="order.html" class="nav-cta">Pre-Order</a></li>
     </ul>
   </nav>
 
@@ -1024,7 +1085,7 @@
         Premium espresso drinks, cold brew, matcha, and more — brought directly to your event. Sourced from the finest origins, served with precision.
       </p>
       <div class="hero-actions reveal reveal-delay-3">
-        <a href="#contact" class="btn-primary">Book Your Event</a>
+        <a href="order.html" class="btn-primary">Pre-Order for Next Event</a>
         <a href="#menu" class="btn-ghost">View Menu</a>
       </div>
     </div>
@@ -1052,7 +1113,41 @@
     </div>
   </div>
 
+  <!-- NEXT EVENT -->
+  <section id="next-event" style="display:none;">
+    <div class="next-event-inner reveal">
+      <div class="next-event-left">
+        <div class="next-event-label" id="ne-label">Next Event</div>
+        <div class="next-event-name" id="ne-name">—</div>
+        <div class="next-event-meta">
+          <span id="ne-date">—</span>
+          <span class="next-event-divider" id="ne-div1">·</span>
+          <span id="ne-location">—</span>
+          <span class="next-event-divider" id="ne-div2">·</span>
+          <span id="ne-hours">—</span>
+        </div>
+        <div id="ne-cutoff" style="margin-top:8px;font-size:9px;letter-spacing:1px;color:rgba(248,246,242,0.3);"></div>
+      </div>
+      <div id="ne-cta">
+        <a href="order.html" class="next-event-btn" id="ne-order-btn">Pre-Order Now →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- NO EVENT STATE (hidden by default) -->
+  <section id="no-event" style="display:none;">
+    <div class="next-event-inner">
+      <div class="next-event-left">
+        <div class="next-event-label">Next Event</div>
+        <div class="next-event-name" style="opacity:0.4;">No upcoming events right now</div>
+        <div class="next-event-meta">Follow us on Instagram for announcements</div>
+      </div>
+      <a href="https://instagram.com/distinct.coffeeco" target="_blank" class="next-event-btn">@distinct.coffeeco →</a>
+    </div>
+  </section>
+
   <!-- SERVICES -->
+
   <section id="services">
     <div class="section-header reveal">
       <div>
@@ -1338,6 +1433,71 @@
         }
       });
     });
+
+    // ── DYNAMIC EVENT BANNER ──────────────────────────────
+    // Replace these with your actual Supabase credentials in js/config.js
+    const SUPABASE_URL      = 'https://qjsitqvfimwiuoojsoge.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqc2l0cXZmaW13aXVvb2pzb2dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MzAwNzUsImV4cCI6MjA5ODUwNjA3NX0.p2qXO5-Z6uWd7n7slhHJT_s2NDvjRlsOMQLqCRxFIcU';
+
+    async function loadNextEvent() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/events?is_active=eq.true&order=date.asc&limit=1`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            }
+          }
+        );
+
+        if (!res.ok) throw new Error('Failed to fetch event');
+        const events = await res.json();
+
+        if (!events || events.length === 0) {
+          // No active event — show the fallback
+          document.getElementById('no-event').style.display = 'block';
+          return;
+        }
+
+        const ev = events[0];
+
+        // Check if order cutoff has passed
+        const now = new Date();
+        const cutoff = ev.order_cutoff ? new Date(ev.order_cutoff) : null;
+        const ordersClosed = cutoff && now > cutoff;
+
+        // Populate fields
+        document.getElementById('ne-name').textContent     = ev.name;
+        document.getElementById('ne-date').textContent     = ev.date;
+        document.getElementById('ne-location').textContent = ev.location;
+        document.getElementById('ne-hours').textContent    = ev.pickup_hours;
+
+        if (ordersClosed) {
+          document.getElementById('ne-label').textContent  = 'Coming Up';
+          document.getElementById('ne-cutoff').textContent = 'Pre-orders are now closed for this event.';
+          document.getElementById('ne-order-btn').style.display = 'none';
+        } else if (cutoff) {
+          const cutoffStr = cutoff.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+          document.getElementById('ne-cutoff').textContent = `Order by ${cutoffStr}`;
+        }
+
+        // Store event id for the order page to use
+        document.getElementById('ne-order-btn').href = `order.html?event_id=${ev.id}`;
+
+        // Show the banner
+        document.getElementById('next-event').style.display = 'block';
+        document.querySelector('#next-event .next-event-inner').classList.add('visible');
+
+      } catch (err) {
+        // On any error just show the no-event fallback silently
+        console.warn('Event load error:', err);
+        document.getElementById('no-event').style.display = 'block';
+      }
+    }
+
+    loadNextEvent();
+
   </script>
 </body>
 </html>
