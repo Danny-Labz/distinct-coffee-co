@@ -291,8 +291,31 @@ async function handleCheckout() {
     if (!supaRes.ok) throw new Error('Could not save your order. Please try again.');
     const [savedOrder] = await supaRes.json();
 
+    // Generate PIN for the saved order
+    const pin = String((parseInt(savedOrder.id.replace(/-/g,'').slice(0,8), 16) % 9000) + 1000);
+
+    // Save PIN to order record
+    await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${savedOrder.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ pickup_pin: pin }),
+    });
+
+    // Send email notification (fire and forget — don't block checkout)
+    fetch('/.netlify/functions/send-notification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'order',
+        data: { ...orderData, pickup_pin: pin, id: savedOrder.id },
+      }),
+    }).catch(() => {}); // silent fail — never block the user flow
+
     if (paymentMethod === 'pay_at_event') {
-      // No Stripe — just redirect to confirmation
       window.location.href = `confirmation.html?order_id=${savedOrder.id}&method=pay_at_event`;
       return;
     }
