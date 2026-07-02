@@ -257,39 +257,18 @@
     .btn-ghost:hover { background: var(--black); color: var(--white); transform: translateY(-1px); }
 
     .hero-right {
-      background: var(--black);
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: stretch;
       position: relative;
       overflow: hidden;
     }
 
-    .hero-bean-wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: float 6s ease-in-out infinite;
-    }
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-18px); }
-    }
-
-    .hero-bean-svg {
-      width: min(260px, 30vw);
-      opacity: 0.95;
-    }
-
-    .hero-right-label {
-      position: absolute;
-      bottom: 48px;
-      left: 48px;
-      color: rgba(248,246,242,0.35);
-      font-size: 9px;
-      font-weight: 500;
-      letter-spacing: 3px;
-      text-transform: uppercase;
+    .hero-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
     }
 
     .hero-scroll {
@@ -1090,13 +1069,7 @@
       </div>
     </div>
     <div class="hero-right">
-      <div class="hero-bean-wrap">
-        <svg class="hero-bean-svg" viewBox="0 0 220 340" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="10" y="10" width="200" height="320" rx="100" stroke="white" stroke-width="16"/>
-          <path d="M110 50 Q168 170 110 290 Q52 170 110 50Z" stroke="white" stroke-width="13" fill="none" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <span class="hero-right-label">Distinct. Coffee Co.</span>
+      <img src="hero-photo.jpg" class="hero-photo" alt="Distinct. Coffee Co. — Simple. Balanced. Distinct." />
     </div>
     <div class="hero-scroll">
       <span>Scroll</span>
