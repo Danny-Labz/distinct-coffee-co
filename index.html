@@ -1283,21 +1283,25 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">First Name</label>
-            <input type="text" class="form-input" placeholder="Danny" />
+            <input type="text" class="form-input" id="inq-first" placeholder="Danny" />
           </div>
           <div class="form-group">
             <label class="form-label">Last Name</label>
-            <input type="text" class="form-input" placeholder="Smith" />
+            <input type="text" class="form-input" id="inq-last" placeholder="Smith" />
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Email Address</label>
-          <input type="email" class="form-input" placeholder="you@example.com" />
+          <input type="email" class="form-input" id="inq-email" placeholder="you@example.com" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone (optional)</label>
+          <input type="tel" class="form-input" id="inq-phone" placeholder="(555) 000-0000" />
         </div>
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Event Type</label>
-            <select class="form-select">
+            <select class="form-select" id="inq-event-type">
               <option value="">Select type...</option>
               <option>Corporate Event</option>
               <option>Wedding</option>
@@ -1308,7 +1312,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Expected Guests</label>
-            <select class="form-select">
+            <select class="form-select" id="inq-guests">
               <option value="">Select range...</option>
               <option>Under 25</option>
               <option>25 – 75</option>
@@ -1320,13 +1324,20 @@
         </div>
         <div class="form-group">
           <label class="form-label">Event Date</label>
-          <input type="date" class="form-input" />
+          <input type="date" class="form-input" id="inq-date" />
         </div>
         <div class="form-group">
           <label class="form-label">Tell Us More</label>
-          <textarea class="form-textarea" placeholder="Share any details about your event, special requests, or questions..."></textarea>
+          <textarea class="form-textarea" id="inq-message" placeholder="Share any details about your event, special requests, or questions..."></textarea>
         </div>
-        <button class="form-submit" type="button">Send Inquiry →</button>
+
+        <!-- Error / Success messages -->
+        <div id="inq-error" style="display:none;background:#fff0f0;border:1px solid #ffcccc;color:#cc0000;padding:12px 16px;border-radius:2px;font-size:11px;margin-bottom:12px;"></div>
+        <div id="inq-success" style="display:none;background:#f0fff4;border:1px solid #b2f5c8;color:#276749;padding:16px;border-radius:2px;font-size:12px;line-height:1.7;margin-bottom:12px;">
+          ✓ Inquiry sent! Danny will get back to you within 24 hours at the email provided.
+        </div>
+
+        <button class="form-submit" type="button" id="inq-submit" onclick="submitInquiry()">Send Inquiry →</button>
       </div>
     </div>
   </section>
@@ -1498,6 +1509,82 @@
     }
 
     loadHomeMenu();
+
+    // ── INQUIRY FORM ──────────────────────────────────────
+    async function submitInquiry() {
+      const btn     = document.getElementById('inq-submit');
+      const errorEl = document.getElementById('inq-error');
+      const successEl = document.getElementById('inq-success');
+
+      errorEl.style.display   = 'none';
+      successEl.style.display = 'none';
+
+      // Validate
+      const first     = document.getElementById('inq-first').value.trim();
+      const last      = document.getElementById('inq-last').value.trim();
+      const email     = document.getElementById('inq-email').value.trim();
+      const phone     = document.getElementById('inq-phone').value.trim();
+      const eventType = document.getElementById('inq-event-type').value;
+      const guests    = document.getElementById('inq-guests').value;
+      const date      = document.getElementById('inq-date').value;
+      const message   = document.getElementById('inq-message').value.trim();
+
+      const errors = [];
+      if (!first)     errors.push('First name is required.');
+      if (!email)     errors.push('Email is required.');
+      if (!eventType) errors.push('Please select an event type.');
+
+      if (errors.length > 0) {
+        errorEl.textContent   = errors.join(' ');
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled    = true;
+      btn.textContent = 'Sending...';
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/inquiries`, {
+          method:  'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'apikey':        SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer':        'return=minimal',
+          },
+          body: JSON.stringify({
+            name:       `${first} ${last}`.trim(),
+            email,
+            phone,
+            event_type: eventType,
+            guests,
+            event_date: date || null,
+            message,
+            status:     'new',
+          }),
+        });
+
+        if (!res.ok) throw new Error('Submission failed');
+
+        // Success
+        successEl.style.display = 'block';
+        btn.textContent         = 'Sent ✓';
+
+        // Clear form
+        ['inq-first','inq-last','inq-email','inq-phone','inq-message'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+        document.getElementById('inq-event-type').value = '';
+        document.getElementById('inq-guests').value     = '';
+        document.getElementById('inq-date').value       = '';
+
+      } catch (err) {
+        errorEl.textContent   = 'Something went wrong. Please email Danny@DistinctCoffeeCo.com directly.';
+        errorEl.style.display = 'block';
+        btn.disabled          = false;
+        btn.textContent       = 'Send Inquiry →';
+      }
+    }
 
   </script>
 </body>
