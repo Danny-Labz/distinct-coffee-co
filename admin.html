@@ -417,12 +417,92 @@
     .panel.active { display: block; }
 
     @media (max-width: 768px) {
-      .topbar { padding: 0 16px; }
-      .tabs { padding: 0 16px; overflow-x: auto; }
-      .content { padding: 16px; }
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-      table { font-size: 10px; }
-      th, td { padding: 10px 10px; }
+      .topbar { padding: 0 16px; height: auto; padding-top: 12px; padding-bottom: 12px; }
+      .topbar-time { display: none; }
+      .topbar-sub { display: none; }
+      .tabs { padding: 0 12px; overflow-x: auto; gap: 0; }
+      .tab { padding: 14px 14px; font-size: 8px; white-space: nowrap; }
+      .content { padding: 12px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
+      .stat-card { padding: 14px 16px; }
+      .stat-card-value { font-size: 22px; }
+      .filter-bar { gap: 8px; }
+      .filter-input { min-width: 0; width: 100%; }
+      .refresh-btn { margin-left: 0; }
+
+      /* Hide desktop tables on mobile */
+      .table-wrap table { display: none !important; }
+
+      /* Show mobile cards instead */
+      .mobile-cards { display: block !important; }
+    }
+
+    /* Mobile card layout — hidden on desktop */
+    .mobile-cards { display: none; }
+
+    .m-card {
+      background: var(--white);
+      border-radius: 2px;
+      padding: 16px;
+      margin-bottom: 8px;
+      border-left: 3px solid transparent;
+    }
+    .m-card.status-paid     { border-left-color: var(--green); }
+    .m-card.status-reserved { border-left-color: #1565c0; }
+    .m-card.status-pending  { border-left-color: var(--yellow); }
+    .m-card.status-new      { border-left-color: var(--yellow); }
+    .m-card.status-contacted{ border-left-color: #1565c0; }
+    .m-card.status-booked   { border-left-color: var(--green); }
+
+    .m-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+    .m-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .m-card-pin {
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      background: var(--off-white);
+      padding: 4px 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .m-card-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 5px 0;
+      border-top: 1px solid var(--border);
+      gap: 8px;
+    }
+    .m-card-label {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--mid);
+      flex-shrink: 0;
+    }
+    .m-card-val {
+      font-size: 11px;
+      text-align: right;
+    }
+    .m-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
     }
   </style>
 </head>
@@ -529,6 +609,8 @@
             <div class="empty-state-text">No orders yet</div>
           </div>
         </div>
+        <!-- Mobile cards -->
+        <div class="mobile-cards" id="orders-cards"></div>
       </div>
 
       <!-- ── INQUIRIES PANEL ── -->
@@ -567,6 +649,8 @@
             <div class="empty-state-text">No inquiries yet</div>
           </div>
         </div>
+        <!-- Mobile cards -->
+        <div class="mobile-cards" id="inquiries-cards"></div>
       </div>
 
       <!-- ── INVENTORY PANEL ── -->
@@ -747,50 +831,72 @@
       document.getElementById('orders-table').style.display = 'table';
       document.getElementById('orders-empty').style.display = 'none';
 
-      document.getElementById('orders-body').innerHTML = filtered.map(o => {
+      const ordersHTML = filtered.map(o => {
         const items = o.items ? Object.values(o.items).map(i => `${i.name} ×${i.qty}`).join(', ') : '—';
         const addons = o.addons && o.addons.length ? `+ ${o.addons.join(', ')}` : '';
         const date   = o.created_at ? new Date(o.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
         const total  = o.total_cents ? `$${(o.total_cents/100).toFixed(2)}` : '—';
         const prefs  = [o.milk_pref, o.temp_pref].filter(Boolean).join(' · ');
+        const statusOpts = ['pending','paid','reserved','fulfilled','cancelled'];
 
-        return `<tr>
-          <td><span class="td-mono">${o.pickup_pin || '—'}</span></td>
-          <td>
-            <div class="td-name">${o.customer_name || '—'}</div>
-            <div class="td-small">${o.email || ''}</div>
-            <div class="td-small">${o.phone || ''}</div>
-          </td>
-          <td>
-            <div>${o.event_name || '—'}</div>
-            <div class="td-small">${o.event_date || ''}</div>
-          </td>
-          <td>${o.pickup_time || '—'}</td>
-          <td>
-            <div class="items-list">
-              <span>${items}</span>
-              ${addons ? `<span style="color:#aaa;">${addons}</span>` : ''}
-              ${prefs ? `<span style="color:#aaa;">${prefs}</span>` : ''}
+        return {
+          tableRow: `<tr>
+            <td><span class="td-mono">${o.pickup_pin || '—'}</span></td>
+            <td>
+              <div class="td-name">${o.customer_name || '—'}</div>
+              <div class="td-small">${o.email || ''}</div>
+              <div class="td-small">${o.phone || ''}</div>
+            </td>
+            <td>
+              <div>${o.event_name || '—'}</div>
+              <div class="td-small">${o.event_date || ''}</div>
+            </td>
+            <td>${o.pickup_time || '—'}</td>
+            <td>
+              <div class="items-list">
+                <span>${items}</span>
+                ${addons ? `<span style="color:#aaa;">${addons}</span>` : ''}
+                ${prefs ? `<span style="color:#aaa;">${prefs}</span>` : ''}
+              </div>
+            </td>
+            <td>${total}</td>
+            <td>
+              <span class="badge ${o.payment_method === 'pay_at_event' ? 'badge-reserved' : 'badge-paid'}">
+                ${o.payment_method === 'pay_at_event' ? 'At Event' : 'Online'}
+              </span>
+            </td>
+            <td>
+              <select class="status-select" onchange="updateOrderStatus('${o.id}', this.value)">
+                ${statusOpts.map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+              </select>
+            </td>
+            <td><span class="td-small">${date}</span></td>
+          </tr>`,
+          card: `<div class="m-card status-${o.status}">
+            <div class="m-card-header">
+              <div>
+                <div class="m-card-name">${o.customer_name || '—'}</div>
+                <div class="td-small">${o.email || ''} ${o.phone ? '· '+o.phone : ''}</div>
+              </div>
+              <div class="m-card-pin">${o.pickup_pin || '—'}</div>
             </div>
-          </td>
-          <td>${total}</td>
-          <td>
-            <span class="badge ${o.payment_method === 'pay_at_event' ? 'badge-reserved' : 'badge-paid'}">
-              ${o.payment_method === 'pay_at_event' ? 'At Event' : 'Online'}
-            </span>
-          </td>
-          <td>
-            <select class="status-select" onchange="updateOrderStatus('${o.id}', this.value)">
-              <option value="pending"  ${o.status==='pending'  ?'selected':''}>Pending</option>
-              <option value="paid"     ${o.status==='paid'     ?'selected':''}>Paid</option>
-              <option value="reserved" ${o.status==='reserved' ?'selected':''}>Reserved</option>
-              <option value="fulfilled"${o.status==='fulfilled'?'selected':''}>Fulfilled</option>
-              <option value="cancelled"${o.status==='cancelled'?'selected':''}>Cancelled</option>
-            </select>
-          </td>
-          <td><span class="td-small">${date}</span></td>
-        </tr>`;
-      }).join('');
+            <div class="m-card-row"><span class="m-card-label">Event</span><span class="m-card-val">${o.event_name || '—'}</span></div>
+            <div class="m-card-row"><span class="m-card-label">Pickup</span><span class="m-card-val">${o.pickup_time || '—'}</span></div>
+            <div class="m-card-row"><span class="m-card-label">Items</span><span class="m-card-val">${items}</span></div>
+            ${prefs ? `<div class="m-card-row"><span class="m-card-label">Prefs</span><span class="m-card-val">${prefs}</span></div>` : ''}
+            ${addons ? `<div class="m-card-row"><span class="m-card-label">Add-ons</span><span class="m-card-val">${addons}</span></div>` : ''}
+            <div class="m-card-footer">
+              <span style="font-size:12px;font-weight:600;">${total} · <span style="font-size:10px;color:#888;">${o.payment_method === 'pay_at_event' ? 'Pay at event' : 'Paid online'}</span></span>
+              <select class="status-select" onchange="updateOrderStatus('${o.id}', this.value)">
+                ${statusOpts.map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+              </select>
+            </div>
+          </div>`
+        };
+      });
+
+      document.getElementById('orders-body').innerHTML  = ordersHTML.map(r => r.tableRow).join('');
+      document.getElementById('orders-cards').innerHTML = ordersHTML.map(r => r.card).join('');
     }
 
     async function updateOrderStatus(id, status) {
@@ -835,35 +941,55 @@
       document.getElementById('inquiries-table').style.display = 'table';
       document.getElementById('inquiries-empty').style.display = 'none';
 
-      document.getElementById('inquiries-body').innerHTML = filtered.map(i => {
+      const inqHTML = filtered.map(i => {
         const date = i.created_at
           ? new Date(i.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
           : '—';
         const evDate = i.event_date
           ? new Date(i.event_date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
           : '—';
+        const statusOpts = ['new','contacted','booked','closed'];
 
-        return `<tr>
-          <td><div class="td-name">${i.name || '—'}</div></td>
-          <td>
-            <div>${i.email || '—'}</div>
-            <div class="td-small">${i.phone || ''}</div>
-          </td>
-          <td>${i.event_type || '—'}</td>
-          <td>${i.guests || '—'}</td>
-          <td>${evDate}</td>
-          <td style="max-width:220px;white-space:normal;font-size:10px;color:#555;">${i.message || '—'}</td>
-          <td>
-            <select class="status-select" onchange="updateInquiryStatus('${i.id}', this.value)">
-              <option value="new"       ${i.status==='new'       ?'selected':''}>New</option>
-              <option value="contacted" ${i.status==='contacted' ?'selected':''}>Contacted</option>
-              <option value="booked"    ${i.status==='booked'    ?'selected':''}>Booked</option>
-              <option value="closed"    ${i.status==='closed'    ?'selected':''}>Closed</option>
-            </select>
-          </td>
-          <td><span class="td-small">${date}</span></td>
-        </tr>`;
-      }).join('');
+        return {
+          tableRow: `<tr>
+            <td><div class="td-name">${i.name || '—'}</div></td>
+            <td>
+              <div>${i.email || '—'}</div>
+              <div class="td-small">${i.phone || ''}</div>
+            </td>
+            <td>${i.event_type || '—'}</td>
+            <td>${i.guests || '—'}</td>
+            <td>${evDate}</td>
+            <td style="max-width:220px;white-space:normal;font-size:10px;color:#555;">${i.message || '—'}</td>
+            <td>
+              <select class="status-select" onchange="updateInquiryStatus('${i.id}', this.value)">
+                ${statusOpts.map(s => `<option value="${s}" ${i.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+              </select>
+            </td>
+            <td><span class="td-small">${date}</span></td>
+          </tr>`,
+          card: `<div class="m-card status-${i.status}">
+            <div class="m-card-header">
+              <div>
+                <div class="m-card-name">${i.name || '—'}</div>
+                <div class="td-small">${date}</div>
+              </div>
+              <select class="status-select" onchange="updateInquiryStatus('${i.id}', this.value)">
+                ${statusOpts.map(s => `<option value="${s}" ${i.status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="m-card-row"><span class="m-card-label">Email</span><span class="m-card-val">${i.email || '—'}</span></div>
+            ${i.phone ? `<div class="m-card-row"><span class="m-card-label">Phone</span><span class="m-card-val">${i.phone}</span></div>` : ''}
+            <div class="m-card-row"><span class="m-card-label">Type</span><span class="m-card-val">${i.event_type || '—'}</span></div>
+            <div class="m-card-row"><span class="m-card-label">Guests</span><span class="m-card-val">${i.guests || '—'}</span></div>
+            <div class="m-card-row"><span class="m-card-label">Date</span><span class="m-card-val">${evDate}</span></div>
+            ${i.message ? `<div class="m-card-row"><span class="m-card-label">Notes</span><span class="m-card-val" style="font-size:10px;color:#555;">${i.message}</span></div>` : ''}
+          </div>`
+        };
+      });
+
+      document.getElementById('inquiries-body').innerHTML  = inqHTML.map(r => r.tableRow).join('');
+      document.getElementById('inquiries-cards').innerHTML = inqHTML.map(r => r.card).join('');
     }
 
     async function updateInquiryStatus(id, status) {
