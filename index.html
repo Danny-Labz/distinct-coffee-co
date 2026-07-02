@@ -1202,60 +1202,10 @@
       </div>
       <p class="section-note" style="color:rgba(248,246,242,0.3)">Menu subject to seasonal updates & sourcing.</p>
     </div>
-    <div class="menu-grid">
-      <div class="menu-category reveal reveal-delay-1">
-        <div class="menu-cat-label">Espresso Bar</div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Espresso</div><div class="menu-item-sub">Single or Double</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Americano</div><div class="menu-item-sub">Espresso & Water</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Latte</div><div class="menu-item-sub">Espresso & Steamed Milk</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Cappuccino</div><div class="menu-item-sub">Classic Italian Style</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Cortado</div><div class="menu-item-sub">Equal Parts Espresso & Milk</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Macchiato</div><div class="menu-item-sub">Espresso Marked With Foam</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-      </div>
-      <div class="menu-category reveal reveal-delay-2">
-        <div class="menu-cat-label">Cold Drinks</div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Cold Brew</div><div class="menu-item-sub">18-Hour Steep</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Iced Latte</div><div class="menu-item-sub">Espresso Over Ice</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Iced Americano</div><div class="menu-item-sub">Bold & Refreshing</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Iced Matcha</div><div class="menu-item-sub">Ceremonial Grade</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Matcha Latte</div><div class="menu-item-sub">Oat or Dairy Milk</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
-        <div class="menu-item">
-          <div><div class="menu-item-name">Iced Tea</div><div class="menu-item-sub">Seasonal Selections</div></div>
-          <div class="menu-item-price">Market</div>
-        </div>
+    <div class="menu-grid" id="home-menu-grid">
+      <!-- Loaded dynamically from Supabase menu_items table -->
+      <div class="menu-category" style="opacity:0.3;grid-column:1/-1;padding:40px;text-align:center;">
+        <div class="menu-cat-label">Loading menu...</div>
       </div>
     </div>
     <p class="menu-note reveal">All drinks available hot or iced · Dairy alternatives available · Custom syrups upon request</p>
@@ -1497,6 +1447,57 @@
     }
 
     loadNextEvent();
+
+    // ── DYNAMIC HOME MENU ─────────────────────────────────
+    async function loadHomeMenu() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/menu_items?is_available=eq.true&order=category.asc,sort_order.asc`,
+          {
+            headers: {
+              'apikey':        SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            }
+          }
+        );
+        if (!res.ok) throw new Error('Menu fetch failed');
+        const items = await res.json();
+        if (!items || items.length === 0) return;
+
+        // Group by category
+        const categories = {};
+        items.forEach(item => {
+          if (!categories[item.category]) categories[item.category] = [];
+          categories[item.category].push(item);
+        });
+
+        const delays = ['reveal-delay-1', 'reveal-delay-2', 'reveal-delay-3'];
+        const grid   = document.getElementById('home-menu-grid');
+
+        grid.innerHTML = Object.entries(categories).map(([cat, catItems], i) => `
+          <div class="menu-category reveal ${delays[i] || ''}">
+            <div class="menu-cat-label">${cat}</div>
+            ${catItems.map(item => `
+              <div class="menu-item">
+                <div>
+                  <div class="menu-item-name">${item.name}</div>
+                  <div class="menu-item-sub">${item.description || ''}</div>
+                </div>
+                <div class="menu-item-price">$${(item.price_cents / 100).toFixed(2)}</div>
+              </div>
+            `).join('')}
+          </div>
+        `).join('');
+
+        // Trigger reveal animations on newly added elements
+        grid.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+      } catch (err) {
+        console.warn('Home menu load error:', err);
+      }
+    }
+
+    loadHomeMenu();
 
   </script>
 </body>
