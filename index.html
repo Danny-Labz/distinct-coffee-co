@@ -1539,6 +1539,20 @@
 
         if (!res.ok) throw new Error('Submission failed');
 
+        // Send email notification (fire and forget)
+        fetch('/.netlify/functions/send-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'inquiry',
+            data: {
+              name:       `${first} ${last}`.trim(),
+              email, phone, event_type: eventType,
+              guests, event_date: date, message,
+            },
+          }),
+        }).catch(() => {}); // silent fail — never block the user
+
         // Success
         successEl.style.display = 'block';
         btn.textContent         = 'Sent ✓';
