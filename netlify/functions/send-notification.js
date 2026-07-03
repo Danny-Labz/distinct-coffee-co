@@ -3,7 +3,7 @@
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const NOTIFY_EMAIL   = 'Danny@DistinctCoffeeCo.com';
-const FROM_EMAIL     = 'orders@distinctcoffeeco.com';
+const FROM_EMAIL     = 'hello@distinctcoffeeco.com';
 
 async function sendEmail(to, subject, html) {
   const res = await fetch('https://api.resend.com/emails', {
