@@ -14,8 +14,9 @@ let activeEvent   = null;
 let paymentMethod = 'pay_now'; // 'pay_now' or 'pay_at_event' 
 
 // ─── INIT ────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-  await Promise.all([loadEvent(), loadMenu()]);
+document.addEventListener('DOMContentLoaded', () => {
+  loadEvent().catch(err => { console.error('loadEvent failed:', err); showNoEvent(); });
+  loadMenu().catch(err => { console.error('loadMenu failed:', err); });
 });
 
 // ─── SUPABASE HELPER ─────────────────────────
