@@ -289,7 +289,7 @@ async function handleCheckout() {
     : activeEvent.location || '';
 
   const orderData = {
-    event_id:      isGeneral ? null : activeEvent.id,
+    event_id:      isGeneral ? '00000000-0000-0000-0000-000000000000' : activeEvent.id,
     event_name:    isGeneral ? 'Custom Order' : activeEvent.name,
     event_date:    isGeneral ? pickupTime : activeEvent.date,
     customer_name: `${document.getElementById('first-name').value.trim()} ${document.getElementById('last-name').value.trim()}`.trim(),
@@ -319,8 +319,14 @@ async function handleCheckout() {
       body: JSON.stringify(orderData),
     });
 
-    if (!supaRes.ok) throw new Error('Could not save your order. Please try again.');
-    const [savedOrder] = await supaRes.json();
+    if (!supaRes.ok) {
+      const errText = await supaRes.text();
+      console.error('Supabase error:', errText);
+      throw new Error('Could not save your order. Please try again.');
+    }
+    const savedBody = await supaRes.json();
+    const savedOrder = Array.isArray(savedBody) ? savedBody[0] : savedBody;
+    if (!savedOrder || !savedOrder.id) throw new Error('Order save returned no data.');
 
     // Generate PIN for the saved order
     const pin = String((parseInt(savedOrder.id.replace(/-/g,'').slice(0,8), 16) % 9000) + 1000);
