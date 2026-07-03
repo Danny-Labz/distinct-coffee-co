@@ -33,8 +33,15 @@ async function supaFetch(path) {
 // ─── LOAD EVENT ──────────────────────────────
 async function loadEvent() {
   const statusEl = document.getElementById('event-status');
+
+  // Force general mode if ?mode=general in URL
+  const params  = new URLSearchParams(window.location.search);
+  if (params.get('mode') === 'general') {
+    showNoEvent();
+    return;
+  }
+
   try {
-    const params  = new URLSearchParams(window.location.search);
     const eventId = params.get('event_id');
 
     const path = eventId
@@ -69,6 +76,10 @@ async function loadEvent() {
 
     document.getElementById('order-form').style.display = 'block';
     if (statusEl) statusEl.style.display = 'none';
+
+    // Show "place a custom order" link alongside the event
+    const generalLink = document.getElementById('general-order-link');
+    if (generalLink) generalLink.style.display = 'block';
 
   } catch (err) {
     console.error(err);
