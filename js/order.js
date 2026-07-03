@@ -77,13 +77,30 @@ async function loadEvent() {
 }
 
 function showNoEvent() {
-  document.getElementById('event-name').textContent     = 'No upcoming events';
-  document.getElementById('event-date').textContent     = 'Follow @distinct.coffeeco for announcements';
+  // No active event — switch to general order mode
+  document.getElementById('event-name').textContent     = 'Custom Order Request';
+  document.getElementById('event-date').textContent     = 'No scheduled event — submit a general request below';
   document.getElementById('event-location').textContent = '';
   document.getElementById('event-pickup').textContent   = '';
-  document.getElementById('order-form').style.display   = 'none';
+
+  // Show general order fields, hide pickup time slot selector
+  const pickupGroup = document.getElementById('pickup-time-group');
+  if (pickupGroup) pickupGroup.style.display = 'none';
+
+  const generalFields = document.getElementById('general-order-fields');
+  if (generalFields) generalFields.style.display = 'block';
+
+  // Mark as general order mode
+  activeEvent = {
+    id:           'general',
+    name:         'Custom Order',
+    date:         '',
+    pickup_hours: '',
+  };
+
+  document.getElementById('order-form').style.display = 'block';
   const el = document.getElementById('event-status');
-  if (el) { el.textContent = 'There are no upcoming events right now. Follow us on Instagram for announcements.'; el.style.display = 'block'; }
+  if (el) el.style.display = 'none';
 }
 
 function showClosed(ev) {
@@ -232,10 +249,16 @@ function updateSummary() {
 // ─── VALIDATION ──────────────────────────────
 function validate() {
   const errors = [];
+  const isGeneral = activeEvent && activeEvent.id === 'general';
   if (Object.keys(cart).length === 0)                      errors.push('Please add at least one item.');
   if (!document.getElementById('first-name').value.trim()) errors.push('First name is required.');
   if (!document.getElementById('email').value.trim())      errors.push('Email is required.');
-  if (!document.getElementById('pickup-time').value)       errors.push('Please select a pickup time.');
+  if (isGeneral) {
+    if (!document.getElementById('general-datetime')?.value)  errors.push('Please select a date and time.');
+    if (!document.getElementById('general-location')?.value.trim()) errors.push('Please enter a service location.');
+  } else {
+    if (!document.getElementById('pickup-time').value) errors.push('Please select a pickup time.');
+  }
   return errors;
 }
 
@@ -257,14 +280,22 @@ async function handleCheckout() {
   btn.disabled    = true;
   btn.textContent = 'Preparing checkout...';
 
+  const isGeneral   = activeEvent.id === 'general';
+  const pickupTime  = isGeneral
+    ? document.getElementById('general-datetime')?.value || ''
+    : document.getElementById('pickup-time').value;
+  const serviceLocation = isGeneral
+    ? document.getElementById('general-location')?.value.trim() || ''
+    : activeEvent.location || '';
+
   const orderData = {
-    event_id:      activeEvent.id,
-    event_name:    activeEvent.name,
-    event_date:    activeEvent.date,
+    event_id:      isGeneral ? null : activeEvent.id,
+    event_name:    isGeneral ? 'Custom Order' : activeEvent.name,
+    event_date:    isGeneral ? pickupTime : activeEvent.date,
     customer_name: `${document.getElementById('first-name').value.trim()} ${document.getElementById('last-name').value.trim()}`.trim(),
     email:         document.getElementById('email').value.trim(),
     phone:         document.getElementById('phone').value.trim(),
-    pickup_time:   document.getElementById('pickup-time').value,
+    pickup_time:   isGeneral ? pickupTime : document.getElementById('pickup-time').value,
     milk_pref:     milk,
     temp_pref:     temp,
     addons,
@@ -272,7 +303,7 @@ async function handleCheckout() {
     total_cents:   Object.values(cart).reduce((sum, i) => sum + i.price * i.qty, 0),
     status:        paymentMethod === 'pay_at_event' ? 'reserved' : 'pending',
     payment_method: paymentMethod,
-    notes:         document.getElementById('notes').value.trim(),
+    notes:         `${serviceLocation ? 'Location: ' + serviceLocation + ' | ' : ''}${document.getElementById('notes').value.trim()}`,
   };
 
   try {
