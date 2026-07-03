@@ -196,6 +196,7 @@ function toggleAddon(btn) {
   } else {
     addons = addons.filter(a => a !== label);
   }
+  updateSummary();
 }
 
 // ─── PAYMENT METHOD ──────────────────────────
@@ -218,6 +219,14 @@ function selectPayment(btn) {
   updateSummary();
 }
 
+// ─── ADDON PRICES ────────────────────────────
+const ADDON_PRICES = {
+  'Extra Shot':     100,
+  'Vanilla Syrup':   75,
+  'Caramel Syrup':   75,
+  'Hazelnut Syrup':  75,
+};
+
 // ─── SUMMARY ─────────────────────────────────
 function updateSummary() {
   const items       = Object.values(cart);
@@ -233,16 +242,33 @@ function updateSummary() {
   }
 
   let total = 0;
-  container.innerHTML = items.map(item => {
+
+  // Drink items
+  let rows = items.map(item => {
     const lineTotal = item.price * item.qty;
     total += lineTotal;
     return `<div class="summary-row">
       <span>${item.name} × ${item.qty}</span>
       <span>$${(lineTotal / 100).toFixed(2)}</span>
     </div>`;
-  }).join('');
+  });
 
+  // Add-ons — charged once per addon (not per drink)
+  addons.forEach(addon => {
+    const price = ADDON_PRICES[addon] || 0;
+    if (price > 0) {
+      total += price;
+      rows.push(`<div class="summary-row">
+        <span>${addon}</span>
+        <span>$${(price / 100).toFixed(2)}</span>
+      </div>`);
+    }
+  });
+
+  container.innerHTML  = rows.join('');
   totalEl.textContent  = `$${(total / 100).toFixed(2)}`;
+  checkoutBtn.disabled = false;
+}
   checkoutBtn.disabled = false;
 }
 
@@ -300,7 +326,8 @@ async function handleCheckout() {
     temp_pref:     temp,
     addons,
     items:         cart,
-    total_cents:   Object.values(cart).reduce((sum, i) => sum + i.price * i.qty, 0),
+    total_cents:   Object.values(cart).reduce((sum, i) => sum + i.price * i.qty, 0) +
+                   addons.reduce((sum, a) => sum + (ADDON_PRICES[a] || 0), 0),
     status:        paymentMethod === 'pay_at_event' ? 'reserved' : 'pending',
     payment_method: paymentMethod,
     notes:         `${serviceLocation ? 'Location: ' + serviceLocation + ' | ' : ''}${document.getElementById('notes').value.trim()}`,
