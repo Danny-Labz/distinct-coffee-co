@@ -412,8 +412,8 @@
       </div>
     </div>
 
-    <!-- PICKUP TIME -->
-    <div class="info-section">
+    <!-- PICKUP TIME (event orders) -->
+    <div class="info-section" id="pickup-time-group">
       <div class="section-label">Pickup Time</div>
       <div class="form-group">
         <label class="form-label">Select your pickup window</label>
@@ -430,6 +430,33 @@
           <option>11:00 AM – 11:15 AM</option>
           <option>11:15 AM – 11:30 AM</option>
         </select>
+      </div>
+    </div>
+
+    <!-- GENERAL ORDER FIELDS (shown when no active event) -->
+    <div class="info-section" id="general-order-fields" style="display:none;">
+      <div class="section-label">Service Details</div>
+      <div class="form-group">
+        <label class="form-label">Requested Date & Time</label>
+        <input type="datetime-local" class="form-input" id="general-datetime" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Service Location</label>
+        <input type="text" class="form-input" id="general-location" placeholder="Address or venue name" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estimated Guests</label>
+        <select class="form-select" id="general-guests">
+          <option value="">Select range...</option>
+          <option>Under 25</option>
+          <option>25 – 75</option>
+          <option>75 – 150</option>
+          <option>150 – 300</option>
+          <option>300+</option>
+        </select>
+      </div>
+      <div style="background:#f8f6f2;border-left:3px solid #c8c3bb;padding:14px 18px;border-radius:2px;font-size:11px;color:#666;line-height:1.7;margin-top:8px;">
+        This is a custom order request — Danny will follow up within 24 hours to confirm availability and finalize details.
       </div>
     </div>
 
