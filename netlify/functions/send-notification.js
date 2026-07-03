@@ -3,7 +3,7 @@
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const NOTIFY_EMAIL   = 'Danny@DistinctCoffeeCo.com';
-const FROM_EMAIL     = 'onboarding@resend.dev'; // Update to orders@distinctcoffeeco.com once domain is verified
+const FROM_EMAIL     = 'orders@distinctcoffeeco.com';
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
