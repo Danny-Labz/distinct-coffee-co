@@ -41,6 +41,9 @@ async function loadEvent() {
     return;
   }
 
+  // Timeout fallback — never stay stuck on loading
+  const timeout = setTimeout(() => showNoEvent(), 6000);
+
   try {
     const eventId = params.get('event_id');
 
@@ -49,6 +52,7 @@ async function loadEvent() {
       : `events?is_active=eq.true&order=created_at.asc&limit=1`;
 
     const events = await supaFetch(path);
+    clearTimeout(timeout);
 
     if (!events || events.length === 0) { showNoEvent(); return; }
 
@@ -56,6 +60,7 @@ async function loadEvent() {
 
     // Check cutoff
     if (activeEvent.order_cutoff && new Date() > new Date(activeEvent.order_cutoff)) {
+      clearTimeout(timeout);
       showClosed(activeEvent); return;
     }
 
@@ -71,47 +76,46 @@ async function loadEvent() {
         `Order by ${cutoff.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}`;
     }
 
-    document.getElementById('ne-order-btn') &&
-      (document.getElementById('ne-order-btn').href = `order.html?event_id=${activeEvent.id}`);
-
     document.getElementById('order-form').style.display = 'block';
     if (statusEl) statusEl.style.display = 'none';
 
-    // Show "place a custom order" link alongside the event
     const generalLink = document.getElementById('general-order-link');
     if (generalLink) generalLink.style.display = 'block';
 
   } catch (err) {
+    clearTimeout(timeout);
     console.error(err);
     showNoEvent();
   }
 }
 
 function showNoEvent() {
-  // No active event — switch to general order mode
-  document.getElementById('event-name').textContent     = 'Custom Order Request';
-  document.getElementById('event-date').textContent     = 'No scheduled event — submit a general request below';
+  // Update banner to no-event state
+  document.getElementById('event-name').textContent     = 'No Upcoming Events';
+  document.getElementById('event-date').textContent     = '';
   document.getElementById('event-location').textContent = '';
   document.getElementById('event-pickup').textContent   = '';
 
-  // Show general order fields, hide pickup time slot selector
-  const pickupGroup = document.getElementById('pickup-time-group');
-  if (pickupGroup) pickupGroup.style.display = 'none';
+  // Show a friendly message with options
+  const statusEl = document.getElementById('event-status');
+  if (statusEl) {
+    statusEl.innerHTML = `
+      <div style="text-align:center;padding:8px 0;">
+        <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:#333;">Nothing scheduled yet — but we're always brewing something.</div>
+        <div style="font-size:11px;color:#888;margin-bottom:20px;line-height:1.7;">Follow us on Instagram for pop-up announcements, or place a custom order request below and Danny will be in touch.</div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <a href="https://instagram.com/distinct.coffeeco" target="_blank" style="display:inline-block;background:#0a0a0a;color:#f8f6f2;text-decoration:none;padding:11px 22px;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;border-radius:2px;">@distinct.coffeeco</a>
+          <a href="order.html?mode=general" style="display:inline-block;background:transparent;color:#0a0a0a;text-decoration:none;padding:11px 22px;font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;border-radius:2px;border:1px solid rgba(10,10,10,0.2);">Custom Order →</a>
+        </div>
+      </div>`;
+    statusEl.style.display = 'block';
+  }
 
-  const generalFields = document.getElementById('general-order-fields');
-  if (generalFields) generalFields.style.display = 'block';
+  // Hide the order form entirely — show status message only
+  document.getElementById('order-form').style.display = 'none';
 
-  // Mark as general order mode
-  activeEvent = {
-    id:           'general',
-    name:         'Custom Order',
-    date:         '',
-    pickup_hours: '',
-  };
-
-  document.getElementById('order-form').style.display = 'block';
-  const el = document.getElementById('event-status');
-  if (el) el.style.display = 'none';
+  // Set activeEvent to null so checkout can't proceed
+  activeEvent = null;
 }
 
 function showClosed(ev) {
