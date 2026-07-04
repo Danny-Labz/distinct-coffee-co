@@ -529,6 +529,26 @@
   </main>
 
   </div><!-- end #order-form -->
+  <script>
+    // Debug: test Supabase connection directly
+    const _url = 'https://qjsitqvfimwiuoojsoge.supabase.co';
+    const _key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqc2l0cXZmaW13aXVvb2pzb2dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MzAwNzUsImV4cCI6MjA5ODUwNjA3NX0.p2qXO5-Z6uWd7n7slhHJT_s2NDvjRlsOMQLqCRxFIcU';
+    const _dbg = document.getElementById('event-name');
+
+    fetch(`${_url}/rest/v1/events?is_active=eq.true&limit=1`, {
+      headers: { 'apikey': _key, 'Authorization': `Bearer ${_key}` }
+    })
+    .then(r => {
+      if (_dbg) _dbg.textContent = `Status: ${r.status}`;
+      return r.json();
+    })
+    .then(d => {
+      if (_dbg) _dbg.textContent = d.length ? `Got event: ${d[0].name}` : 'No events returned';
+    })
+    .catch(e => {
+      if (_dbg) _dbg.textContent = `Fetch error: ${e.message}`;
+    });
+  </script>
   <script src="js/order.js"></script>
 </body>
 </html>
