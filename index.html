@@ -172,6 +172,10 @@
       display: none;
     }
 
+    .mobile-nav-bar {
+      display: none;
+    }
+
     .hero-eyebrow {
       font-size: 9px;
       font-weight: 600;
@@ -919,7 +923,42 @@
       .nav-logo-img { height: 88px; }
       #hero { grid-template-columns: 1fr; }
       .hero-right { display: none; }
-      .hero-left { padding: 232px 32px 80px; }
+      .hero-left { padding: 268px 32px 80px; }
+        align-items: center;
+        justify-content: space-around;
+        position: fixed;
+        top: 174px;
+        left: 0;
+        right: 0;
+        z-index: 98;
+        background: rgba(248, 246, 242, 0.8);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(10,10,10,0.08);
+        padding: 0;
+        height: 36px;
+      }
+      .mobile-nav-item {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 8.5px;
+        font-weight: 600;
+        letter-spacing: 1.8px;
+        text-transform: uppercase;
+        color: var(--black);
+        text-decoration: none;
+        padding: 0 8px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        opacity: 0.55;
+        transition: opacity 0.2s;
+      }
+      .mobile-nav-item:hover,
+      .mobile-nav-item:active { opacity: 1; }
+      .mobile-nav-highlight {
+        opacity: 1;
+        color: var(--black);
+        border-bottom: 2px solid var(--black);
+      }
       .hero-tagline-mobile {
         display: flex;
         flex-direction: column;
@@ -1052,6 +1091,15 @@
       </a>
     </span>
   </div>
+
+  <!-- MOBILE NAV BAR -->
+  <nav class="mobile-nav-bar">
+    <a href="#services" class="mobile-nav-item">Catering</a>
+    <a href="#menu" class="mobile-nav-item">Menu</a>
+    <a href="order.html" class="mobile-nav-item mobile-nav-highlight">Order</a>
+    <a href="#about" class="mobile-nav-item">About</a>
+    <a href="#contact" class="mobile-nav-item">Contact</a>
+  </nav>
 
   <!-- HERO -->
   <section id="hero">
