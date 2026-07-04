@@ -575,12 +575,14 @@ async function submitOrder() {
     const saved = await r.json();
     const orderId = Array.isArray(saved) ? saved[0].id : saved.id;
 
-    // Send notification email (silent fail)
-    fetch('/.netlify/functions/send-notification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'order', data: { ...orderData, pickup_pin: pin, id: orderId } }),
-    }).catch(() => {});
+    // Send notification email — await it so mobile doesn't cancel before redirect
+    try {
+      await fetch('/.netlify/functions/send-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'order', data: { ...orderData, pickup_pin: pin, id: orderId } }),
+      });
+    } catch(e) { console.warn('Notification failed:', e); }
 
     if (paymentMethod === 'pay_at_event') {
       window.location.href = `confirmation.html?order_id=${orderId}&method=pay_at_event`;
