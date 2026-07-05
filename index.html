@@ -1446,9 +1446,14 @@
         { href: '#contact',  el: document.getElementById('contact') },
       ];
 
+      // Find the section whose top is closest to but still above the threshold
       let active = null;
+      let closest = -Infinity;
       sections.forEach(s => {
-        if (s.el && s.el.getBoundingClientRect().top + window.scrollY <= scrollY) {
+        if (!s.el) return;
+        const top = s.el.getBoundingClientRect().top + window.scrollY;
+        if (top <= scrollY && top > closest) {
+          closest = top;
           active = s.href;
         }
       });
