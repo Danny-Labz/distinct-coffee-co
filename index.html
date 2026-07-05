@@ -952,15 +952,19 @@
         gap: 4px;
         height: 100%;
         padding: 0 10px;
-        opacity: 0.45;
+        opacity: 0.4;
         transition: opacity 0.2s;
         flex: 1;
+        border-bottom: 2px solid transparent;
+        box-sizing: border-box;
       }
-      .mobile-nav-item:hover,
       .mobile-nav-item:active { opacity: 1; }
+      .mobile-nav-item.nav-active {
+        opacity: 1;
+        border-bottom: 2px solid var(--black);
+      }
       .mobile-nav-highlight {
         opacity: 1;
-        color: var(--black);
         border-bottom: 2px solid var(--black);
       }
       .hero-tagline-mobile {
@@ -1113,7 +1117,7 @@
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span>About</span>
     </a>
-    <a href="order.html" class="mobile-nav-item mobile-nav-highlight">
+    <a href="order.html" class="mobile-nav-item" id="nav-order">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
       <span>Order</span>
     </a>
@@ -1420,11 +1424,34 @@
       const tagline = document.querySelector('.hero-tagline-mobile');
       const navBar  = document.querySelector('.mobile-nav-bar');
       if (!tagline || !navBar) return;
-      const bottom = tagline.getBoundingClientRect().bottom + window.scrollY;
       navBar.style.top = tagline.offsetHeight + tagline.offsetTop + 'px';
     }
     positionMobileNav();
     window.addEventListener('resize', positionMobileNav);
+
+    // Scroll-based active nav highlighting
+    const mobileNavLinks = document.querySelectorAll('.mobile-nav-bar .mobile-nav-item');
+    const sections = [
+      { id: 'menu',     el: document.getElementById('menu') },
+      { id: 'services', el: document.getElementById('services') },
+      { id: 'about',    el: document.getElementById('about') },
+    ];
+
+    function updateMobileNav() {
+      if (window.innerWidth > 900) return;
+      const scrollY = window.scrollY + 200;
+      let active = null;
+      sections.forEach(s => {
+        if (s.el && s.el.offsetTop <= scrollY) active = s.id;
+      });
+      mobileNavLinks.forEach(link => {
+        link.classList.remove('nav-active');
+        const href = link.getAttribute('href');
+        if (active && href === `#${active}`) link.classList.add('nav-active');
+      });
+    }
+    window.addEventListener('scroll', updateMobileNav);
+    updateMobileNav();
 
     // Nav scroll border
     window.addEventListener('scroll', () => {
