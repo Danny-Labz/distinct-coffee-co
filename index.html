@@ -923,17 +923,20 @@
       .nav-logo-img { height: 88px; }
       #hero { grid-template-columns: 1fr; }
       .hero-right { display: none; }
-      .hero-left { padding: 310px 32px 80px; }
+      .hero-left { padding: 60px 32px 80px; }
       .mobile-nav-bar {
         display: flex;
         align-items: center;
         justify-content: space-around;
+        position: sticky;
+        top: 0;
+        z-index: 97;
         width: 100%;
-        background: transparent;
-        border-top: 1px solid rgba(10,10,10,0.08);
-        margin-top: 8px;
-        padding-top: 8px;
-        height: 48px;
+        background: rgba(248, 246, 242, 0.92);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(10,10,10,0.08);
+        height: 52px;
+        margin-top: 0;
       }
       .mobile-nav-item {
         font-family: 'Montserrat', sans-serif;
@@ -979,7 +982,7 @@
         color: var(--black);
         text-align: center;
         line-height: 1.5;
-        padding: 10px 20px 0;
+        padding: 12px 20px 14px;
         background: rgba(248, 246, 242, 0.8);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid rgba(10,10,10,0.1);
@@ -1115,6 +1118,26 @@
     <a href="#about" class="mobile-nav-item">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span>About</span>
+    </a>
+  </nav>
+
+  <!-- MOBILE NAV BAR — below logo/tagline -->
+  <nav class="mobile-nav-bar">
+    <a href="#menu" class="mobile-nav-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <span>Menu</span>
+    </a>
+    <a href="#services" class="mobile-nav-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Catering</span>
+    </a>
+    <a href="#about" class="mobile-nav-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>About</span>
+    </a>
+    <a href="order.html" class="mobile-nav-item mobile-nav-highlight">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span>Order</span>
     </a>
   </nav>
 
