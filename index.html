@@ -948,24 +948,28 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-end;
         gap: 4px;
         height: 100%;
-        padding: 0 10px;
+        padding: 0 10px 10px;
         opacity: 0.4;
         transition: opacity 0.2s;
         flex: 1;
-        border-bottom: 2px solid transparent;
-        box-sizing: border-box;
+        position: relative;
       }
       .mobile-nav-item:active { opacity: 1; }
       .mobile-nav-item.nav-active {
         opacity: 1;
-        border-bottom: 2px solid var(--black);
       }
-      .mobile-nav-highlight {
-        opacity: 1;
-        border-bottom: 2px solid var(--black);
+      .mobile-nav-item.nav-active::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 20%;
+        right: 20%;
+        height: 2px;
+        background: var(--black);
+        border-radius: 1px;
       }
       .hero-tagline-mobile {
         display: flex;
@@ -1431,27 +1435,32 @@
 
     // Scroll-based active nav highlighting
     const mobileNavLinks = document.querySelectorAll('.mobile-nav-bar .mobile-nav-item');
-    const sections = [
-      { id: 'menu',     el: document.getElementById('menu') },
-      { id: 'services', el: document.getElementById('services') },
-      { id: 'about',    el: document.getElementById('about') },
-    ];
 
     function updateMobileNav() {
       if (window.innerWidth > 900) return;
-      const scrollY = window.scrollY + 200;
+      const scrollY = window.scrollY + window.innerHeight * 0.4;
+      const sections = [
+        { href: '#menu',     el: document.getElementById('menu') },
+        { href: '#services', el: document.getElementById('services') },
+        { href: '#about',    el: document.getElementById('about') },
+        { href: '#contact',  el: document.getElementById('contact') },
+      ];
+
       let active = null;
       sections.forEach(s => {
-        if (s.el && s.el.offsetTop <= scrollY) active = s.id;
+        if (s.el && s.el.getBoundingClientRect().top + window.scrollY <= scrollY) {
+          active = s.href;
+        }
       });
+
       mobileNavLinks.forEach(link => {
         link.classList.remove('nav-active');
         const href = link.getAttribute('href');
-        if (active && href === `#${active}`) link.classList.add('nav-active');
+        if (active && href === active) link.classList.add('nav-active');
       });
     }
-    window.addEventListener('scroll', updateMobileNav);
-    updateMobileNav();
+    window.addEventListener('scroll', updateMobileNav, { passive: true });
+    // Don't call on load — let user scroll to activate
 
     // Nav scroll border
     window.addEventListener('scroll', () => {
