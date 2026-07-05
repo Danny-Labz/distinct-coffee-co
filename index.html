@@ -302,6 +302,11 @@
       50% { opacity: 0.7; }
     }
 
+    /* ── HEADER SPACER ── */
+    .header-spacer {
+      height: 72px; /* desktop nav height */
+    }
+
     /* ── MARQUEE ── */
     .marquee-section {
       background: var(--black);
@@ -924,6 +929,7 @@
       .nav-logo-img { height: 88px; }
       #hero { grid-template-columns: 1fr; }
       .hero-right { display: none; }
+      .header-spacer { height: 240px; } /* mobile: nav + tagline + nav bar */
       .hero-left { padding: 60px 32px 60px; }
       .mobile-nav-bar {
         display: flex;
@@ -1131,6 +1137,9 @@
   </nav>
 
   <!-- MARQUEE -->
+  <!-- TOP SPACER — pushes content below fixed header -->
+  <div class="header-spacer"></div>
+
   <div class="marquee-section">
     <div class="marquee-track">
       <!-- Repeated for seamless loop -->
