@@ -1543,18 +1543,47 @@
 
         // Multiple events — cycle with fade
         let current = 0;
-        populateEvent(events[0], 0, events.length);
+        populateEvent(events[0], 0, events.length, null);
 
-        setInterval(() => {
+        // Auto-cycle interval
+        let cycleTimer = startCycle();
+
+        function startCycle() {
+          return setInterval(() => goToEvent((current + 1) % events.length), 5000);
+        }
+
+        function goToEvent(idx) {
           const inner = document.querySelector('#next-event .next-event-inner');
-          inner.style.transition = 'opacity 0.5s ease';
+          inner.style.transition = 'opacity 0.4s ease';
           inner.style.opacity = '0';
           setTimeout(() => {
-            current = (current + 1) % events.length;
-            populateEvent(events[current], current, events.length);
+            current = idx;
+            populateEvent(events[current], current, events.length, goToEvent);
             inner.style.opacity = '1';
-          }, 500);
-        }, 5000);
+          }, 400);
+        }
+
+        // Store goToEvent for dot clicks
+        window._eventGoTo = goToEvent;
+        window._eventReset = () => {
+          clearInterval(cycleTimer);
+          cycleTimer = startCycle();
+        };
+
+        // Swipe support on mobile
+        const banner = document.getElementById('next-event');
+        let touchStartX = 0;
+        banner.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+        banner.addEventListener('touchend', e => {
+          const diff = touchStartX - e.changedTouches[0].clientX;
+          if (Math.abs(diff) < 40) return; // ignore short swipes
+          clearInterval(cycleTimer);
+          goToEvent(diff > 0
+            ? (current + 1) % events.length          // swipe left → next
+            : (current - 1 + events.length) % events.length // swipe right → prev
+          );
+          cycleTimer = startCycle(); // reset auto-cycle after swipe
+        }, { passive: true });
 
       } catch (err) {
         console.warn('Event load error:', err);
@@ -1589,12 +1618,21 @@
         orderBtn.href = `order.html?event_id=${ev.id}`;
       }
 
-      // Render dots if multiple events
+      // Render dots — clickable on desktop, indicators on mobile
       const dotsEl = document.getElementById('ne-dots');
       if (dotsEl && total > 1) {
         dotsEl.innerHTML = Array.from({ length: total }, (_, i) =>
-          `<div style="width:6px;height:6px;border-radius:50%;background:${i === index ? 'rgba(248,246,242,0.9)' : 'rgba(248,246,242,0.25)'};transition:background 0.4s;"></div>`
+          `<div data-idx="${i}" style="width:6px;height:6px;border-radius:50%;background:${i === index ? 'rgba(248,246,242,0.9)' : 'rgba(248,246,242,0.25)'};transition:background 0.4s;cursor:pointer;"></div>`
         ).join('');
+
+        // Dot click — go to that event and reset auto-cycle
+        dotsEl.querySelectorAll('div').forEach(dot => {
+          dot.addEventListener('click', () => {
+            const idx = parseInt(dot.dataset.idx);
+            if (window._eventGoTo) window._eventGoTo(idx);
+            if (window._eventReset) window._eventReset();
+          });
+        });
       }
 
       document.querySelector('#next-event .next-event-inner').classList.add('visible');
