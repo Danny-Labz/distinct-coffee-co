@@ -269,74 +269,45 @@
     const SUPABASE_URL      = 'https://qjsitqvfimwiuoojsoge.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqc2l0cXZmaW13aXVvb2pzb2dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MzAwNzUsImV4cCI6MjA5ODUwNjA3NX0.p2qXO5-Z6uWd7n7slhHJT_s2NDvjRlsOMQLqCRxFIcU';
 
-    // Generate a clean 4-digit PIN from UUID
-    function generatePin(uuid) {
-      // Use characters from the UUID to derive a stable 4-digit number
-      const hex = uuid.replace(/-/g, '');
-      const num = parseInt(hex.slice(0, 8), 16);
-      const pin = String((num % 9000) + 1000); // always 4 digits, 1000–9999
-      return pin.split('');
-    }
-
     async function loadOrder() {
-      const params    = new URLSearchParams(window.location.search);
-      const orderId   = params.get('order_id');
-      const method    = params.get('method');
+      const params  = new URLSearchParams(window.location.search);
+      const orderId = params.get('order_id');
+      const method  = params.get('method');
 
       if (!orderId) return;
 
-      // Generate and display PIN immediately
-      const pinDigits = generatePin(orderId);
-      const pinEl     = document.getElementById('pin-digits');
-      pinEl.innerHTML = pinDigits.map(d => `<div class="pin-digit">${d}</div>`).join('');
-
       // Adjust messaging for pay-at-event
       if (method === 'pay_at_event') {
-        document.getElementById('eyebrow').textContent      = 'Reservation Confirmed';
-        document.getElementById('headline').textContent     = 'Order reserved.';
-        document.getElementById('desc').textContent         = 'No payment taken yet. Show your PIN at pickup and pay by cash or card on the day.';
+        document.getElementById('eyebrow').textContent       = 'Reservation Confirmed';
+        document.getElementById('headline').textContent      = 'Order reserved.';
+        document.getElementById('desc').textContent          = 'No payment taken yet. Show your PIN at pickup and pay by cash or card on the day.';
         document.getElementById('pin-instruction').innerHTML = 'Show this screen at your pickup window.<br>Pay by cash or card when you collect.';
-
-        document.getElementById('payment-badge-wrap').innerHTML =
-          '<div class="payment-badge reserved">⏳ Pay at Event</div>';
+        document.getElementById('payment-badge-wrap').innerHTML = '<div class="payment-badge reserved">⏳ Pay at Event</div>';
       } else {
-        document.getElementById('payment-badge-wrap').innerHTML =
-          '<div class="payment-badge paid">✓ Payment Confirmed</div>';
+        document.getElementById('payment-badge-wrap').innerHTML = '<div class="payment-badge paid">✓ Payment Confirmed</div>';
       }
 
-      // Fetch order details from Supabase to populate summary
+      // Fetch order from Supabase — use stored PIN, not regenerated
       try {
         const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=customer_name,pickup_time,event_name,event_date,total_cents`,
-          {
-            headers: {
-              'apikey':        SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            }
-          }
+          `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=customer_name,pickup_time,event_name,event_date,total_cents,pickup_pin`,
+          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
         );
         if (!res.ok) return;
         const [order] = await res.json();
         if (!order) return;
 
+        // Display the PIN that was stored during order submission
+        const pin = order.pickup_pin || '----';
+        const pinEl = document.getElementById('pin-digits');
+        pinEl.innerHTML = pin.split('').map(d => `<div class="pin-digit">${d}</div>`).join('');
+
+        // Populate order details
         document.getElementById('det-name').textContent   = order.customer_name || '—';
         document.getElementById('det-pickup').textContent = order.pickup_time   || '—';
         document.getElementById('det-event').textContent  = `${order.event_name} · ${order.event_date}`;
         document.getElementById('det-total').textContent  = order.total_cents
-          ? `$${(order.total_cents / 100).toFixed(2)}`
-          : '—';
-
-        // Save PIN back to Supabase on the order record
-        const pin = pinDigits.join('');
-        await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, {
-          method:  'PATCH',
-          headers: {
-            'Content-Type':  'application/json',
-            'apikey':        SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ pickup_pin: pin }),
-        });
+          ? `$${(order.total_cents / 100).toFixed(2)}` : '—';
 
       } catch (err) {
         console.warn('Could not load order details:', err);
