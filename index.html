@@ -1172,6 +1172,7 @@
           <span id="ne-hours">—</span>
         </div>
         <div id="ne-cutoff" style="margin-top:8px;font-size:9px;letter-spacing:1px;color:rgba(248,246,242,0.3);"></div>
+        <div id="ne-dots" style="display:flex;gap:6px;margin-top:12px;"></div>
       </div>
       <div id="ne-cta">
         <a href="order.html" class="next-event-btn" id="ne-order-btn">Pre-Order Now →</a>
@@ -1514,7 +1515,7 @@
     async function loadNextEvent() {
       try {
         const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/events?is_active=eq.true&order=date.asc&limit=1`,
+          `${SUPABASE_URL}/rest/v1/events?is_active=eq.true&order=created_at.asc`,
           {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
@@ -1523,49 +1524,80 @@
           }
         );
 
-        if (!res.ok) throw new Error('Failed to fetch event');
+        if (!res.ok) throw new Error('Failed to fetch events');
         const events = await res.json();
 
         if (!events || events.length === 0) {
-          // No active event — show the fallback
           document.getElementById('no-event').style.display = 'block';
           return;
         }
 
-        const ev = events[0];
+        // Show banner
+        document.getElementById('next-event').style.display = 'block';
 
-        // Check if order cutoff has passed
-        const now = new Date();
-        const cutoff = ev.order_cutoff ? new Date(ev.order_cutoff) : null;
-        const ordersClosed = cutoff && now > cutoff;
-
-        // Populate fields
-        document.getElementById('ne-name').textContent     = ev.name;
-        document.getElementById('ne-date').textContent     = ev.date;
-        document.getElementById('ne-location').textContent = ev.location;
-        document.getElementById('ne-hours').textContent    = ev.pickup_hours;
-
-        if (ordersClosed) {
-          document.getElementById('ne-label').textContent  = 'Coming Up';
-          document.getElementById('ne-cutoff').textContent = 'Pre-orders are now closed for this event.';
-          document.getElementById('ne-order-btn').style.display = 'none';
-        } else if (cutoff) {
-          const cutoffStr = cutoff.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
-          document.getElementById('ne-cutoff').textContent = `Order by ${cutoffStr}`;
+        // If only one event, show it statically
+        if (events.length === 1) {
+          populateEvent(events[0], 0, 1);
+          return;
         }
 
-        // Store event id for the order page to use
-        document.getElementById('ne-order-btn').href = `order.html?event_id=${ev.id}`;
+        // Multiple events — cycle with fade
+        let current = 0;
+        populateEvent(events[0], 0, events.length);
 
-        // Show the banner
-        document.getElementById('next-event').style.display = 'block';
-        document.querySelector('#next-event .next-event-inner').classList.add('visible');
+        setInterval(() => {
+          const inner = document.querySelector('#next-event .next-event-inner');
+          inner.style.transition = 'opacity 0.5s ease';
+          inner.style.opacity = '0';
+          setTimeout(() => {
+            current = (current + 1) % events.length;
+            populateEvent(events[current], current, events.length);
+            inner.style.opacity = '1';
+          }, 500);
+        }, 5000);
 
       } catch (err) {
-        // On any error just show the no-event fallback silently
         console.warn('Event load error:', err);
         document.getElementById('no-event').style.display = 'block';
       }
+    }
+
+    function populateEvent(ev, index, total) {
+      const now = new Date();
+      const cutoff = ev.order_cutoff ? new Date(ev.order_cutoff) : null;
+      const ordersClosed = cutoff && now > cutoff;
+
+      document.getElementById('ne-label').textContent    = ordersClosed ? 'Coming Up' : 'Next Event';
+      document.getElementById('ne-name').textContent     = ev.name;
+      document.getElementById('ne-date').textContent     = ev.date;
+      document.getElementById('ne-location').textContent = ev.location;
+      document.getElementById('ne-hours').textContent    = ev.pickup_hours;
+
+      const cutoffEl = document.getElementById('ne-cutoff');
+      const orderBtn = document.getElementById('ne-order-btn');
+
+      if (ordersClosed) {
+        cutoffEl.textContent = 'Pre-orders are now closed for this event.';
+        orderBtn.style.display = 'none';
+      } else {
+        if (cutoff) {
+          cutoffEl.textContent = `Order by ${cutoff.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}`;
+        } else {
+          cutoffEl.textContent = '';
+        }
+        orderBtn.style.display = '';
+        orderBtn.href = `order.html?event_id=${ev.id}`;
+      }
+
+      // Render dots if multiple events
+      const dotsEl = document.getElementById('ne-dots');
+      if (dotsEl && total > 1) {
+        dotsEl.innerHTML = Array.from({ length: total }, (_, i) =>
+          `<div style="width:6px;height:6px;border-radius:50%;background:${i === index ? 'rgba(248,246,242,0.9)' : 'rgba(248,246,242,0.25)'};transition:background 0.4s;"></div>`
+        ).join('');
+      }
+
+      document.querySelector('#next-event .next-event-inner').classList.add('visible');
     }
 
     loadNextEvent();
