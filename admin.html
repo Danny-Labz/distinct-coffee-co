@@ -1008,21 +1008,24 @@
       document.getElementById('inventory-table').style.display  = 'none';
       document.getElementById('inventory-empty').style.display  = 'none';
       try {
-        const [items, orders] = await Promise.all([
-          supaFetch('menu_items?order=category.asc,sort_order.asc'),
-          supaFetch('orders?select=items'),
-        ]);
+        // Load menu items — required
+        const items = await supaFetch('menu_items?order=category.asc,sort_order.asc');
         allInventory = items;
 
-        // Count how many times each item name has been ordered
-        const orderCounts = {};
-        orders.forEach(o => {
-          if (!o.items) return;
-          Object.values(o.items).forEach(item => {
-            orderCounts[item.name] = (orderCounts[item.name] || 0) + item.qty;
+        // Load order counts — optional, don't block if it fails
+        try {
+          const orders = await supaFetch('orders?select=items');
+          const orderCounts = {};
+          orders.forEach(o => {
+            if (!o.items) return;
+            Object.values(o.items).forEach(item => {
+              orderCounts[item.name] = (orderCounts[item.name] || 0) + item.qty;
+            });
           });
-        });
-        allInventory.forEach(i => { i._order_count = orderCounts[i.name] || 0; });
+          allInventory.forEach(i => { i._order_count = orderCounts[i.name] || 0; });
+        } catch(e) {
+          allInventory.forEach(i => { i._order_count = 0; });
+        }
 
         // Populate category filter
         const cats = [...new Set(items.map(i => i.category).filter(Boolean))];
@@ -1033,7 +1036,7 @@
 
         renderInventory();
       } catch(e) {
-        document.getElementById('inventory-loading').textContent = 'Failed to load menu items.';
+        document.getElementById('inventory-loading').textContent = `Failed to load menu items: ${e.message}`;
       }
     }
 
