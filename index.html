@@ -923,21 +923,17 @@
       .nav-logo-img { height: 88px; }
       #hero { grid-template-columns: 1fr; }
       .hero-right { display: none; }
-      .hero-left { padding: 292px 32px 80px; }
+      .hero-left { padding: 310px 32px 80px; }
       .mobile-nav-bar {
         display: flex;
         align-items: center;
         justify-content: space-around;
-        position: fixed;
-        top: 174px;
-        left: 0;
-        right: 0;
-        z-index: 98;
-        background: rgba(248, 246, 242, 0.92);
-        backdrop-filter: blur(12px);
-        border-bottom: 1px solid rgba(10,10,10,0.08);
-        padding: 0;
-        height: 52px;
+        width: 100%;
+        background: transparent;
+        border-top: 1px solid rgba(10,10,10,0.08);
+        margin-top: 8px;
+        padding-top: 8px;
+        height: 48px;
       }
       .mobile-nav-item {
         font-family: 'Montserrat', sans-serif;
@@ -983,7 +979,7 @@
         color: var(--black);
         text-align: center;
         line-height: 1.5;
-        padding: 12px 20px 14px;
+        padding: 10px 20px 0;
         background: rgba(248, 246, 242, 0.8);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid rgba(10,10,10,0.1);
