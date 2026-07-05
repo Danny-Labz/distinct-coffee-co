@@ -153,7 +153,7 @@
 
     /* ── HERO ── */
     #hero {
-      min-height: 100vh;
+      min-height: 60vh;
       display: grid;
       grid-template-columns: 1fr 1fr;
       position: relative;
@@ -164,7 +164,7 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 140px 64px 80px 80px;
+      padding: 80px 64px 80px 80px;
       position: relative;
       z-index: 2;
     }
@@ -924,7 +924,7 @@
       .nav-logo-img { height: 88px; }
       #hero { grid-template-columns: 1fr; }
       .hero-right { display: none; }
-      .hero-left { padding: 220px 32px 80px; }
+      .hero-left { padding: 60px 32px 60px; }
       .mobile-nav-bar {
         display: flex;
         align-items: center;
@@ -1130,29 +1130,6 @@
     </a>
   </nav>
 
-  <!-- HERO -->
-  <section id="hero">
-    <div class="hero-left">
-      <div class="hero-eyebrow reveal">Mobile Coffee Catering</div>
-      <h1 class="hero-title reveal reveal-delay-1">
-        Coffee<br><em>crafted</em><br>for every<br>occasion.
-      </h1>
-      <p class="hero-desc reveal reveal-delay-2">
-        Premium espresso drinks, cold brew, matcha, and more — brought directly to your event. Sourced from the finest origins, served with precision.
-      </p>
-      <div class="hero-actions reveal reveal-delay-3">
-        <a href="order.html" class="btn-primary">Pre-Order for Next Event</a>
-      </div>
-    </div>
-    <div class="hero-right">
-      <img src="hero-photo.jpg" class="hero-photo" alt="Distinct. Coffee Co. — Simple. Balanced. Distinct." />
-    </div>
-    <div class="hero-scroll">
-      <span>Scroll</span>
-      <div class="hero-scroll-line"></div>
-    </div>
-  </section>
-
   <!-- MARQUEE -->
   <div class="marquee-section">
     <div class="marquee-track">
@@ -1193,69 +1170,27 @@
     </div>
   </section>
 
-  <!-- SERVICES -->
-
-  <section id="services">
-    <div class="section-header reveal">
-      <div>
-        <div class="section-eyebrow">What We Offer</div>
-        <h2 class="section-title">Built for your<br><em>event</em></h2>
-      </div>
-      <p class="section-note">Every setup tailored to your scale and vision.</p>
-    </div>
-    <div class="services-grid">
-      <div class="service-card reveal reveal-delay-1">
-        <div class="service-number">01</div>
-        <div class="service-name">Corporate<br>Events</div>
-        <p class="service-desc">Keep your team energized and clients impressed. Professional setup with zero friction.</p>
-        <ul class="service-items">
-          <li>Office meetings & all-hands</li>
-          <li>Client entertainment</li>
-          <li>Launch events & activations</li>
-          <li>Full bar setup & breakdown</li>
-        </ul>
-      </div>
-      <div class="service-card reveal reveal-delay-2">
-        <div class="service-number">02</div>
-        <div class="service-name">Weddings &<br>Celebrations</div>
-        <p class="service-desc">Make your special day unforgettable with a curated coffee experience your guests will talk about.</p>
-        <ul class="service-items">
-          <li>Weddings & receptions</li>
-          <li>Rehearsal dinners</li>
-          <li>Bridal & baby showers</li>
-          <li>Custom menu curation</li>
-        </ul>
-      </div>
-      <div class="service-card reveal reveal-delay-3">
-        <div class="service-number">03</div>
-        <div class="service-name">Private &<br>Social</div>
-        <p class="service-desc">From intimate gatherings to large social events, we bring the café experience to you.</p>
-        <ul class="service-items">
-          <li>Birthday & milestone events</li>
-          <li>Pop-ups & markets</li>
-          <li>Community gatherings</li>
-          <li>Flexible packages</li>
-        </ul>
+  <!-- HERO -->
+  <section id="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow reveal">Mobile Coffee Catering</div>
+      <h1 class="hero-title reveal reveal-delay-1">
+        Coffee<br><em>crafted</em><br>for every<br>occasion.
+      </h1>
+      <p class="hero-desc reveal reveal-delay-2">
+        Premium espresso drinks, cold brew, matcha, and more — brought directly to your event. Sourced from the finest origins, served with precision.
+      </p>
+      <div class="hero-actions reveal reveal-delay-3">
+        <a href="order.html" class="btn-primary">Pre-Order for Next Event</a>
       </div>
     </div>
-  </section>
-
-  <!-- MENU -->
-  <section id="menu">
-    <div class="section-header reveal">
-      <div>
-        <div class="section-eyebrow">The Menu</div>
-        <h2 class="section-title">Crafted with<br><em>intention</em></h2>
-      </div>
-      <p class="section-note" style="color:rgba(248,246,242,0.3)">Menu subject to seasonal updates & sourcing.</p>
+    <div class="hero-right">
+      <img src="hero-photo.jpg" class="hero-photo" alt="Distinct. Coffee Co. — Simple. Balanced. Distinct." />
     </div>
-    <div class="menu-grid" id="home-menu-grid">
-      <!-- Loaded dynamically from Supabase menu_items table -->
-      <div class="menu-category" style="opacity:0.3;grid-column:1/-1;padding:40px;text-align:center;">
-        <div class="menu-cat-label">Loading menu...</div>
-      </div>
+    <div class="hero-scroll">
+      <span>Scroll</span>
+      <div class="hero-scroll-line"></div>
     </div>
-    <p class="menu-note reveal">All drinks available hot or iced · Dairy alternatives available · Custom syrups upon request</p>
   </section>
 
   <!-- ABOUT -->
@@ -1298,6 +1233,24 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- MENU -->
+  <section id="menu">
+    <div class="section-header reveal">
+      <div>
+        <div class="section-eyebrow">The Menu</div>
+        <h2 class="section-title">Crafted with<br><em>intention</em></h2>
+      </div>
+      <p class="section-note" style="color:rgba(248,246,242,0.3)">Menu subject to seasonal updates & sourcing.</p>
+    </div>
+    <div class="menu-grid" id="home-menu-grid">
+      <!-- Loaded dynamically from Supabase menu_items table -->
+      <div class="menu-category" style="opacity:0.3;grid-column:1/-1;padding:40px;text-align:center;">
+        <div class="menu-cat-label">Loading menu...</div>
+      </div>
+    </div>
+    <p class="menu-note reveal">All drinks available hot or iced · Dairy alternatives available · Custom syrups upon request</p>
   </section>
 
   <!-- CONTACT -->
