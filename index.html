@@ -302,6 +302,11 @@
       50% { opacity: 0.7; }
     }
 
+    /* ── SCROLL OFFSET — accounts for fixed header height ── */
+    #about, #menu, #contact, #next-event, #no-event, #services {
+      scroll-margin-top: 80px; /* desktop */
+    }
+
     /* ── HEADER SPACER ── */
     .header-spacer {
       height: 72px; /* desktop nav height */
@@ -1022,6 +1027,9 @@
       .next-event-inner { flex-direction: column; align-items: flex-start; gap: 16px; padding: 24px 0; }
       .next-event-meta { flex-wrap: wrap; gap: 6px; }
       .next-event-btn { width: 100%; text-align: center; }
+      #about, #menu, #contact, #next-event, #no-event, #services {
+        scroll-margin-top: 250px; /* mobile: nav + tagline strip + nav bar */
+      }
       .hero-title { font-size: clamp(34px, 9vw, 48px); line-height: 1.05; margin-bottom: 20px; }
       .hero-desc { margin-bottom: 28px; font-size: 12px; }
       #services { padding: 80px 28px; }
