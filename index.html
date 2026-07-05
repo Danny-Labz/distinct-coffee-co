@@ -199,7 +199,7 @@
     .hero-title {
       font-family: 'Montserrat', sans-serif;
       font-weight: 200;
-      font-size: clamp(48px, 6vw, 80px);
+      font-size: clamp(36px, 6vw, 80px);
       font-weight: 400;
       line-height: 1.0;
       letter-spacing: 0.5px;
@@ -930,7 +930,7 @@
       #hero { grid-template-columns: 1fr; }
       .hero-right { display: none; }
       .header-spacer { height: 240px; } /* mobile: nav + tagline + nav bar */
-      .hero-left { padding: 60px 32px 60px; }
+      .hero-left { padding: 32px 32px 48px; }
       .mobile-nav-bar {
         display: flex;
         align-items: center;
@@ -1019,9 +1019,11 @@
         opacity: 1;
       }
       #next-event { padding: 0 28px; }
-      .next-event-inner { flex-direction: column; align-items: flex-start; gap: 20px; padding: 28px 0; }
+      .next-event-inner { flex-direction: column; align-items: flex-start; gap: 16px; padding: 24px 0; }
       .next-event-meta { flex-wrap: wrap; gap: 6px; }
       .next-event-btn { width: 100%; text-align: center; }
+      .hero-title { font-size: clamp(34px, 9vw, 48px); line-height: 1.05; margin-bottom: 20px; }
+      .hero-desc { margin-bottom: 28px; font-size: 12px; }
       #services { padding: 80px 28px; }
       .services-grid { grid-template-columns: 1fr; }
       .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -1182,7 +1184,6 @@
   <!-- HERO -->
   <section id="hero">
     <div class="hero-left">
-      <div class="hero-eyebrow reveal">Mobile Coffee Catering</div>
       <h1 class="hero-title reveal reveal-delay-1">
         Coffee<br><em>crafted</em><br>for every<br>occasion.
       </h1>
