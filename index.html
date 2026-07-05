@@ -923,7 +923,7 @@
       .nav-logo-img { height: 88px; }
       #hero { grid-template-columns: 1fr; }
       .hero-right { display: none; }
-      .hero-left { padding: 268px 32px 80px; }
+      .hero-left { padding: 292px 32px 80px; }
       .mobile-nav-bar {
         display: flex;
         align-items: center;
@@ -933,26 +933,30 @@
         left: 0;
         right: 0;
         z-index: 98;
-        background: rgba(248, 246, 242, 0.8);
+        background: rgba(248, 246, 242, 0.92);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid rgba(10,10,10,0.08);
         padding: 0;
-        height: 36px;
+        height: 52px;
       }
       .mobile-nav-item {
         font-family: 'Montserrat', sans-serif;
-        font-size: 8.5px;
+        font-size: 7.5px;
         font-weight: 600;
-        letter-spacing: 1.8px;
+        letter-spacing: 1px;
         text-transform: uppercase;
         color: var(--black);
         text-decoration: none;
-        padding: 0 8px;
-        height: 100%;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        opacity: 0.55;
+        justify-content: center;
+        gap: 4px;
+        height: 100%;
+        padding: 0 10px;
+        opacity: 0.45;
         transition: opacity 0.2s;
+        flex: 1;
       }
       .mobile-nav-item:hover,
       .mobile-nav-item:active { opacity: 1; }
@@ -968,7 +972,7 @@
         justify-content: center;
         gap: 8px;
         position: fixed;
-        top: 126px;
+        top: 126px;  /* tagline strip */
         left: 0;
         right: 0;
         z-index: 99;
@@ -1096,11 +1100,26 @@
 
   <!-- MOBILE NAV BAR -->
   <nav class="mobile-nav-bar">
-    <a href="#services" class="mobile-nav-item">Catering</a>
-    <a href="#menu" class="mobile-nav-item">Menu</a>
-    <a href="order.html" class="mobile-nav-item mobile-nav-highlight">Order</a>
-    <a href="#about" class="mobile-nav-item">About</a>
-    <a href="#contact" class="mobile-nav-item">Contact</a>
+    <a href="#menu" class="mobile-nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <span>Menu</span>
+    </a>
+    <a href="order.html" class="mobile-nav-item mobile-nav-highlight">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span>Order</span>
+    </a>
+    <a href="#services" class="mobile-nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Catering</span>
+    </a>
+    <a href="#contact" class="mobile-nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Inquiry</span>
+    </a>
+    <a href="#about" class="mobile-nav-item">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>About</span>
+    </a>
   </nav>
 
   <!-- HERO -->
@@ -1115,7 +1134,6 @@
       </p>
       <div class="hero-actions reveal reveal-delay-3">
         <a href="order.html" class="btn-primary">Pre-Order for Next Event</a>
-        <a href="#menu" class="btn-ghost">View Menu</a>
       </div>
     </div>
     <div class="hero-right">
