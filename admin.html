@@ -732,7 +732,7 @@
       setInterval(updateClock, 1000);
       loadOrders();
       loadInquiries();
-      debugInventoryRaw();
+      loadInventory();
     }
 
     function updateClock() {
@@ -1003,21 +1003,6 @@
     }
 
     // ─── INVENTORY ───────────────────────────────────────
-    async function debugInventoryRaw() {
-      const el = document.getElementById('inventory-loading');
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items?select=*`, {
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        const text = await res.text();
-        el.style.display = 'block';
-        el.textContent = `RAW STATUS: ${res.status} | BODY: ${text.slice(0, 300)}`;
-      } catch (e) {
-        el.style.display = 'block';
-        el.textContent = `RAW FETCH ERROR: ${e.message}`;
-      }
-    }
-
     async function loadInventory() {
       document.getElementById('inventory-loading').style.display = 'block';
       document.getElementById('inventory-table').style.display  = 'none';
