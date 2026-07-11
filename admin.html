@@ -1041,44 +1041,55 @@
     }
 
     function renderInventory() {
-      const catFilter = document.getElementById('inv-filter-cat').value;
-      let filtered = allInventory.filter(i => !catFilter || i.category === catFilter);
+      try {
+        const catFilter = document.getElementById('inv-filter-cat').value;
+        let filtered = allInventory.filter(i => !catFilter || i.category === catFilter);
 
-      document.getElementById('inventory-loading').style.display = 'none';
+        document.getElementById('inventory-loading').style.display = 'none';
 
-      if (filtered.length === 0) {
-        document.getElementById('inventory-table').style.display = 'none';
-        document.getElementById('inventory-empty').style.display = 'block';
-        return;
+        if (filtered.length === 0) {
+          document.getElementById('inventory-table').style.display = 'none';
+          document.getElementById('inventory-empty').style.display = 'block';
+          return;
+        }
+
+        document.getElementById('inventory-table').style.display = 'table';
+        document.getElementById('inventory-empty').style.display = 'none';
+
+        document.getElementById('inventory-body').innerHTML = filtered.map(item => {
+          const price = (item.price_cents != null) ? (item.price_cents / 100).toFixed(2) : '0.00';
+          const orderCount = item._order_count != null ? item._order_count : 0;
+          const itemId = item.id || '';
+          const isAvail = item.is_available !== false;
+          return `
+          <tr>
+            <td>
+              <div class="td-name">${item.name || 'Unnamed item'}</div>
+              <div class="td-small">${item.description || ''}</div>
+            </td>
+            <td>${item.category || '—'}</td>
+            <td>$${price}</td>
+            <td>
+              <span style="font-weight:500;">${orderCount}</span>
+              <span class="td-small">ordered total</span>
+            </td>
+            <td>
+              <label class="toggle">
+                <input type="checkbox" ${isAvail ? 'checked' : ''}
+                  onchange="toggleAvailability('${itemId}', this.checked)" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="td-small" style="margin-top:4px;">
+                ${isAvail ? 'Available' : 'Hidden'}
+              </span>
+            </td>
+          </tr>`;
+        }).join('');
+      } catch (err) {
+        console.error('renderInventory error:', err);
+        document.getElementById('inventory-loading').style.display = 'block';
+        document.getElementById('inventory-loading').textContent = `Render error: ${err.message}`;
       }
-
-      document.getElementById('inventory-table').style.display = 'table';
-      document.getElementById('inventory-empty').style.display = 'none';
-
-      document.getElementById('inventory-body').innerHTML = filtered.map(item => `
-        <tr>
-          <td>
-            <div class="td-name">${item.name}</div>
-            <div class="td-small">${item.description || ''}</div>
-          </td>
-          <td>${item.category || '—'}</td>
-          <td>$${(item.price_cents / 100).toFixed(2)}</td>
-          <td>
-            <span style="font-weight:500;">${item._order_count}</span>
-            <span class="td-small">ordered total</span>
-          </td>
-          <td>
-            <label class="toggle">
-              <input type="checkbox" ${item.is_available ? 'checked' : ''}
-                onchange="toggleAvailability('${item.id}', this.checked)" />
-              <span class="toggle-slider"></span>
-            </label>
-            <span class="td-small" style="margin-top:4px;">
-              ${item.is_available ? 'Available' : 'Hidden'}
-            </span>
-          </td>
-        </tr>
-      `).join('');
     }
 
     async function toggleAvailability(id, available) {
