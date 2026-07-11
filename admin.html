@@ -1010,7 +1010,9 @@
       document.getElementById('inventory-empty').style.display  = 'none';
       try {
         // Load menu items — required
+        alert('about to fetch menu_items');
         const items = await supaFetch('menu_items?order=category.asc,sort_order.asc');
+        alert('fetched ' + items.length + ' items: ' + JSON.stringify(items[0]));
         allInventory = items;
 
         // Load order counts — optional, don't block if it fails
@@ -1035,8 +1037,11 @@
         sel.innerHTML = '<option value="">All Categories</option>' +
           cats.map(c => `<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('');
 
+        alert('about to call renderInventory, allInventory.length=' + allInventory.length);
         renderInventory();
+        alert('renderInventory finished');
       } catch(e) {
+        alert('CAUGHT ERROR: ' + e.message);
         document.getElementById('inventory-loading').textContent = `Failed to load menu items: ${e.message}`;
       }
     }
