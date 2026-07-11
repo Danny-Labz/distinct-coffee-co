@@ -430,8 +430,12 @@
       .filter-input { min-width: 0; width: 100%; }
       .refresh-btn { margin-left: 0; }
 
-      /* Hide desktop tables on mobile */
-      .table-wrap table { display: none !important; }
+      /* Hide desktop tables on mobile — EXCEPT inventory, which has no mobile card view */
+      .table-wrap table:not(#inventory-table) { display: none !important; }
+
+      /* Inventory table: keep visible but make it horizontally scrollable on mobile */
+      #inventory-table { display: table !important; font-size: 10px; }
+      .table-wrap { overflow-x: auto; }
 
       /* Show mobile cards instead */
       .mobile-cards { display: block !important; }
@@ -1004,15 +1008,12 @@
 
     // ─── INVENTORY ───────────────────────────────────────
     async function loadInventory() {
-      alert('loadInventory() was called');
       document.getElementById('inventory-loading').style.display = 'block';
       document.getElementById('inventory-table').style.display  = 'none';
       document.getElementById('inventory-empty').style.display  = 'none';
       try {
         // Load menu items — required
-        alert('about to fetch menu_items');
         const items = await supaFetch('menu_items?order=category.asc,sort_order.asc');
-        alert('fetched ' + items.length + ' items: ' + JSON.stringify(items[0]));
         allInventory = items;
 
         // Load order counts — optional, don't block if it fails
@@ -1037,11 +1038,8 @@
         sel.innerHTML = '<option value="">All Categories</option>' +
           cats.map(c => `<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('');
 
-        alert('about to call renderInventory, allInventory.length=' + allInventory.length);
         renderInventory();
-        alert('renderInventory finished');
       } catch(e) {
-        alert('CAUGHT ERROR: ' + e.message);
         document.getElementById('inventory-loading').textContent = `Failed to load menu items: ${e.message}`;
       }
     }
