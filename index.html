@@ -1514,8 +1514,8 @@
 
     async function loadNextEvent() {
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/events?is_active=eq.true&order=created_at.asc`,
+        let res = await fetch(
+          `${SUPABASE_URL}/rest/v1/events?is_active=eq.true&order=date_value.asc.nullslast,created_at.asc`,
           {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
@@ -1523,6 +1523,19 @@
             }
           }
         );
+
+        // Fallback if date_value column doesn't exist
+        if (!res.ok) {
+          res = await fetch(
+            `${SUPABASE_URL}/rest/v1/events?is_active=eq.true&order=created_at.asc`,
+            {
+              headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+              }
+            }
+          );
+        }
 
         if (!res.ok) throw new Error('Failed to fetch events');
         const events = await res.json();
@@ -1534,6 +1547,13 @@
 
         // Show banner
         document.getElementById('next-event').style.display = 'block';
+
+        // Point hero + nav pre-order buttons to the soonest event
+        const soonestId = events[0].id;
+        const heroBtn = document.querySelector('.hero-actions .btn-primary');
+        const navBtn  = document.querySelector('.nav-cta');
+        if (heroBtn) heroBtn.href = `order.html?event_id=${soonestId}`;
+        if (navBtn)  navBtn.href  = `order.html?event_id=${soonestId}`;
 
         // If only one event, show it statically
         if (events.length === 1) {
