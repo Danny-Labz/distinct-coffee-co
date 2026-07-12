@@ -204,12 +204,6 @@
       <button class="chip" onclick="selectChip(this,'milk')">No Milk</button>
     </div>
 
-    <div class="section-label">Temperature</div>
-    <div class="chips" id="temp-chips">
-      <button class="chip active" onclick="selectChip(this,'temp')">Hot</button>
-      <button class="chip" onclick="selectChip(this,'temp')">Iced</button>
-    </div>
-
     <div class="section-label">Add-ons</div>
     <div class="chips" id="addon-chips">
       <button class="chip" onclick="toggleAddon(this)" data-price="100">Extra Shot +$1.00</button>
@@ -329,7 +323,6 @@ const ADDON_PRICES = { 'Extra Shot': 100, 'Vanilla Syrup': 75, 'Caramel Syrup': 
 let cart = {};
 let addons = [];
 let milk = 'Dairy';
-let temp = 'Hot';
 let paymentMethod = 'pay_now';
 let activeEvent = null;
 
@@ -362,7 +355,7 @@ async function loadMenu() {
       <div class="menu-section">
         <div class="section-label">${cat}</div>
         ${catItems.map(item => `
-          <div class="menu-item" data-id="${item.id}" data-name="${item.name}" data-price="${item.price_cents}">
+          <div class="menu-item" data-id="${item.id}" data-name="${item.name}" data-price="${item.price_cents}" data-category="${item.category}">
             <div style="flex:1;">
               <div class="item-name">${item.name}</div>
               <div class="item-desc">${item.description || ''}</div>
@@ -430,10 +423,11 @@ function changeQty(btn, delta) {
   const id = row.dataset.id;
   const name = row.dataset.name;
   const price = parseInt(row.dataset.price);
+  const category = row.dataset.category || '';
   let qty = Math.max(0, parseInt(disp.textContent) + delta);
   disp.textContent = qty;
   if (qty === 0) delete cart[id];
-  else cart[id] = { name, price, qty };
+  else cart[id] = { name, price, qty, category };
   updateSummary();
 }
 
@@ -442,7 +436,6 @@ function selectChip(btn, group) {
   btn.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
   if (group === 'milk') milk = btn.textContent.trim();
-  if (group === 'temp') temp = btn.textContent.trim();
 }
 
 function toggleAddon(btn) {
@@ -539,6 +532,11 @@ async function submitOrder() {
     + addons.reduce((s,a) => s + (ADDON_PRICES[a]||0), 0);
   const pin = String((parseInt(crypto.randomUUID().replace(/-/g,'').slice(0,8), 16) % 9000) + 1000);
 
+  // Auto-derive temp summary from what's actually in the cart
+  const hasHot  = Object.values(cart).some(i => (i.category || '').toLowerCase().includes('espresso'));
+  const hasCold = Object.values(cart).some(i => (i.category || '').toLowerCase().includes('cold'));
+  const tempSummary = hasHot && hasCold ? 'Mixed (Hot & Iced)' : hasCold ? 'Iced' : hasHot ? 'Hot' : '—';
+
   const orderData = {
     event_id:       hasEvent ? activeEvent.id : '00000000-0000-0000-0000-000000000000',
     event_name:     hasEvent ? activeEvent.name : 'Custom Order',
@@ -548,7 +546,7 @@ async function submitOrder() {
     phone:          document.getElementById('phone').value.trim(),
     pickup_time:    pickupTime,
     milk_pref:      milk,
-    temp_pref:      temp,
+    temp_pref:      tempSummary,
     addons,
     items:          cart,
     total_cents:    totalCents,
