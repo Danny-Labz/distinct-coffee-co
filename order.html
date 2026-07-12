@@ -597,7 +597,11 @@ async function submitOrder() {
       body: JSON.stringify({ order_id: orderId, items: cart, addons, customer_email: orderData.email, event_name: orderData.event_name }),
     });
 
-    if (!sr.ok) throw new Error('Checkout failed');
+    if (!sr.ok) {
+      const errText = await sr.text();
+      console.error('Stripe checkout error:', errText);
+      throw new Error(`Checkout failed: ${errText}`);
+    }
     const { url } = await sr.json();
     window.location.href = url;
 
