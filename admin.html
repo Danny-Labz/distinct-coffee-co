@@ -828,6 +828,53 @@
             <div class="empty-state-text">No menu items found</div>
           </div>
         </div>
+
+        <!-- ── ADD-ONS & MILK OPTIONS ── -->
+        <div class="section-label" style="margin-top:32px;">Milk Options</div>
+        <div class="filter-bar">
+          <button class="refresh-btn" onclick="openAddonModal('milk')">+ Add Milk Option</button>
+        </div>
+        <div class="table-wrap">
+          <div class="loading" id="milk-loading">Loading milk options...</div>
+          <table id="milk-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Extra Cost</th>
+                <th>Available</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="milk-body"></tbody>
+          </table>
+          <div class="empty-state" id="milk-empty" style="display:none;">
+            <div class="empty-state-icon">🥛</div>
+            <div class="empty-state-text">No milk options yet</div>
+          </div>
+        </div>
+
+        <div class="section-label" style="margin-top:28px;">Add-ons & Syrups</div>
+        <div class="filter-bar">
+          <button class="refresh-btn" onclick="openAddonModal('syrup')">+ Add Syrup / Add-on</button>
+        </div>
+        <div class="table-wrap">
+          <div class="loading" id="syrup-loading">Loading add-ons...</div>
+          <table id="syrup-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Available</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="syrup-body"></tbody>
+          </table>
+          <div class="empty-state" id="syrup-empty" style="display:none;">
+            <div class="empty-state-icon">🍯</div>
+            <div class="empty-state-text">No add-ons yet</div>
+          </div>
+        </div>
       </div>
 
       <!-- ── EVENTS PANEL ── -->
@@ -915,6 +962,40 @@
     </div>
   </div>
 
+  <!-- ADDON MODAL -->
+  <div id="addon-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span id="addon-modal-title">Add Option</span>
+        <button class="modal-close" onclick="closeAddonModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" id="addon-name-label">Name</label>
+          <input type="text" class="form-input" id="addon-name-input" placeholder="Oat Milk" />
+        </div>
+        <div class="form-group" id="addon-price-group">
+          <label class="form-label">Extra Cost ($ — enter 0 if free)</label>
+          <input type="number" step="0.25" min="0" class="form-input" id="addon-price-input" placeholder="0.00" />
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:10px;">
+          <label class="toggle">
+            <input type="checkbox" id="addon-active-input" checked />
+            <span class="toggle-slider"></span>
+          </label>
+          <span style="font-size:11px;">Available</span>
+        </div>
+        <div class="msg msg-error" id="addon-modal-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-delete" id="addon-delete-btn" onclick="deleteAddon()" style="display:none;">Delete</button>
+        <div style="flex:1;"></div>
+        <button class="modal-btn-cancel" onclick="closeAddonModal()">Cancel</button>
+        <button class="modal-btn-save" onclick="saveAddon()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ─── CONFIG ──────────────────────────────────────────
     const SUPABASE_URL      = 'https://qjsitqvfimwiuoojsoge.supabase.co';
@@ -962,6 +1043,7 @@
       loadOrders();
       loadInquiries();
       loadInventory();
+      loadAddons();
       loadEvents();
     }
 
@@ -1577,6 +1659,160 @@
       } catch (e) {
         const errorEl = document.getElementById('event-modal-error');
         errorEl.textContent = `Could not delete event: ${e.message}`;
+        errorEl.style.display = 'block';
+      }
+    }
+
+
+    // ─── ADD-ONS & MILK OPTIONS MANAGEMENT ────────────────
+    let allAddons = [];
+    let editingAddonId = null;
+    let addonModalType = 'milk'; // 'milk' or 'syrup'
+
+    async function loadAddons() {
+      document.getElementById('milk-loading').style.display  = 'block';
+      document.getElementById('syrup-loading').style.display = 'block';
+      try {
+        allAddons = await supaFetch('addons?order=type.asc,sort_order.asc');
+        renderAddons();
+      } catch (e) {
+        document.getElementById('milk-loading').textContent  = `Failed to load: ${e.message}`;
+        document.getElementById('syrup-loading').textContent = `Failed to load: ${e.message}`;
+      }
+    }
+
+    function renderAddons() {
+      renderAddonGroup('milk',  'milk-loading',  'milk-table',  'milk-body',  'milk-empty');
+      renderAddonGroup('syrup', 'syrup-loading', 'syrup-table', 'syrup-body', 'syrup-empty');
+    }
+
+    function renderAddonGroup(type, loadingId, tableId, bodyId, emptyId) {
+      const items = allAddons.filter(a => a.type === type);
+      document.getElementById(loadingId).style.display = 'none';
+
+      if (items.length === 0) {
+        document.getElementById(tableId).style.display = 'none';
+        document.getElementById(emptyId).style.display = 'block';
+        return;
+      }
+
+      document.getElementById(tableId).style.display = 'table';
+      document.getElementById(emptyId).style.display = 'none';
+
+      document.getElementById(bodyId).innerHTML = items.map(a => {
+        const price = a.price_cents ? `+$${(a.price_cents/100).toFixed(2)}` : 'Free';
+        return `
+        <tr>
+          <td class="td-name">${a.name}</td>
+          <td>${price}</td>
+          <td>
+            <label class="toggle">
+              <input type="checkbox" ${a.is_available ? 'checked' : ''} onchange="toggleAddonAvailability('${a.id}', this.checked)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </td>
+          <td>
+            <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);padding:6px 12px;font-size:8px;" onclick="openAddonModal('${type}','${a.id}')">Edit</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function toggleAddonAvailability(id, available) {
+      await supaUpdate('addons', id, { is_available: available });
+      const item = allAddons.find(a => a.id === id);
+      if (item) item.is_available = available;
+    }
+
+    function openAddonModal(type, addonId) {
+      addonModalType   = type;
+      editingAddonId   = addonId || null;
+      document.getElementById('addon-modal-error').style.display = 'none';
+
+      const isMilk = type === 'milk';
+      document.getElementById('addon-name-label').textContent = isMilk ? 'Milk Option Name' : 'Add-on Name';
+      document.getElementById('addon-price-group').style.display = 'block';
+
+      if (addonId) {
+        const a = allAddons.find(x => x.id === addonId);
+        if (!a) return;
+        document.getElementById('addon-modal-title').textContent = isMilk ? 'Edit Milk Option' : 'Edit Add-on';
+        document.getElementById('addon-name-input').value   = a.name || '';
+        document.getElementById('addon-price-input').value  = a.price_cents ? (a.price_cents/100).toFixed(2) : '0';
+        document.getElementById('addon-active-input').checked = !!a.is_available;
+        document.getElementById('addon-delete-btn').style.display = 'inline-block';
+      } else {
+        document.getElementById('addon-modal-title').textContent = isMilk ? 'Add Milk Option' : 'Add Syrup / Add-on';
+        document.getElementById('addon-name-input').value = '';
+        document.getElementById('addon-price-input').value = '0';
+        document.getElementById('addon-active-input').checked = true;
+        document.getElementById('addon-delete-btn').style.display = 'none';
+      }
+
+      document.getElementById('addon-modal-overlay').style.display = 'flex';
+    }
+
+    function closeAddonModal() {
+      document.getElementById('addon-modal-overlay').style.display = 'none';
+      editingAddonId = null;
+    }
+
+    async function saveAddon() {
+      const errorEl = document.getElementById('addon-modal-error');
+      errorEl.style.display = 'none';
+
+      const name  = document.getElementById('addon-name-input').value.trim();
+      const price = parseFloat(document.getElementById('addon-price-input').value || '0');
+      const active = document.getElementById('addon-active-input').checked;
+
+      if (!name) { errorEl.textContent = 'Name is required.'; errorEl.style.display = 'block'; return; }
+
+      const payload = {
+        type: addonModalType,
+        name,
+        price_cents: Math.round(price * 100),
+        is_available: active,
+      };
+
+      try {
+        let res;
+        if (editingAddonId) {
+          res = await fetch(`${SUPABASE_URL}/rest/v1/addons?id=eq.${editingAddonId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          payload.sort_order = allAddons.filter(a => a.type === addonModalType).length + 1;
+          res = await fetch(`${SUPABASE_URL}/rest/v1/addons`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
+            body: JSON.stringify(payload),
+          });
+        }
+        if (!res.ok) throw new Error(await res.text());
+        closeAddonModal();
+        loadAddons();
+      } catch (e) {
+        errorEl.textContent = `Could not save: ${e.message}`;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    async function deleteAddon() {
+      if (!editingAddonId) return;
+      if (!confirm('Delete this option? This cannot be undone.')) return;
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/addons?id=eq.${editingAddonId}`, {
+          method: 'DELETE',
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        });
+        if (!res.ok) throw new Error(await res.text());
+        closeAddonModal();
+        loadAddons();
+      } catch (e) {
+        const errorEl = document.getElementById('addon-modal-error');
+        errorEl.textContent = `Could not delete: ${e.message}`;
         errorEl.style.display = 'block';
       }
     }
