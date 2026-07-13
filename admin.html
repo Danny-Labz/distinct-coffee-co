@@ -1482,6 +1482,12 @@
     // Try to parse a real date from the event — checks for a date_value column first, else parses the "date" text field loosely
     function parseEventDate(ev) {
       if (ev.date_value) {
+        // Parse as local date, not UTC, to avoid timezone day-shift bugs
+        const parts = String(ev.date_value).split('-');
+        if (parts.length === 3) {
+          const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+          if (!isNaN(d)) return d;
+        }
         const d = new Date(ev.date_value);
         if (!isNaN(d)) return d;
       }
