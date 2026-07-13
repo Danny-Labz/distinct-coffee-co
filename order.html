@@ -197,20 +197,10 @@
   <!-- CUSTOMIZATIONS -->
   <div id="customizations" style="display:none;">
     <div class="section-label" style="margin-top:8px;">Milk Preference</div>
-    <div class="chips" id="milk-chips">
-      <button class="chip active" onclick="selectChip(this,'milk')">Dairy</button>
-      <button class="chip" onclick="selectChip(this,'milk')">Oat</button>
-      <button class="chip" onclick="selectChip(this,'milk')">Almond</button>
-      <button class="chip" onclick="selectChip(this,'milk')">No Milk</button>
-    </div>
+    <div class="chips" id="milk-chips"></div>
 
     <div class="section-label">Add-ons</div>
-    <div class="chips" id="addon-chips">
-      <button class="chip" onclick="toggleAddon(this)" data-price="100">Extra Shot +$1.00</button>
-      <button class="chip" onclick="toggleAddon(this)" data-price="75">Vanilla Syrup +$0.75</button>
-      <button class="chip" onclick="toggleAddon(this)" data-price="75">Caramel Syrup +$0.75</button>
-      <button class="chip" onclick="toggleAddon(this)" data-price="75">Hazelnut Syrup +$0.75</button>
-    </div>
+    <div class="chips" id="addon-chips"></div>
   </div>
 
   <!-- EVENT / DATE -->
@@ -318,17 +308,17 @@
 const SUPABASE_URL = 'https://qjsitqvfimwiuoojsoge.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqc2l0cXZmaW13aXVvb2pzb2dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MzAwNzUsImV4cCI6MjA5ODUwNjA3NX0.p2qXO5-Z6uWd7n7slhHJT_s2NDvjRlsOMQLqCRxFIcU';
 
-const ADDON_PRICES = { 'Extra Shot': 100, 'Vanilla Syrup': 75, 'Caramel Syrup': 75, 'Hazelnut Syrup': 75 };
+let ADDON_PRICES = {}; // populated dynamically from Supabase addons table
 
 let cart = {};
 let addons = [];
-let milk = 'Dairy';
+let milk = '';
 let paymentMethod = 'pay_now';
 let activeEvent = null;
 
 // ── INIT ──────────────────────────────────────
 window.addEventListener('load', async () => {
-  await Promise.allSettled([loadMenu(), loadEvent()]);
+  await Promise.allSettled([loadMenu(), loadEvent(), loadAddons()]);
 });
 
 // ── FETCH HELPERS ─────────────────────────────
@@ -375,6 +365,44 @@ async function loadMenu() {
 
   } catch(e) {
     document.getElementById('menu-container').innerHTML = `<p style="color:#c00;font-size:12px;padding:20px 0;">Could not load menu (${e.message}). Please refresh.</p>`;
+  }
+}
+
+// ── LOAD ADD-ONS & MILK OPTIONS ─────────────────
+async function loadAddons() {
+  try {
+    const items = await sbFetch('addons?is_available=eq.true&order=type.asc,sort_order.asc');
+    const milks  = items.filter(a => a.type === 'milk');
+    const syrups = items.filter(a => a.type === 'syrup');
+
+    // Render milk chips
+    const milkContainer = document.getElementById('milk-chips');
+    if (milks.length) {
+      milkContainer.innerHTML = milks.map((m, i) => `
+        <button class="chip ${i === 0 ? 'active' : ''}" onclick="selectChip(this,'milk')">${m.name}</button>
+      `).join('');
+      milk = milks[0].name; // default to first milk option
+    } else {
+      milkContainer.innerHTML = '<span style="font-size:10px;color:#999;">No milk options available</span>';
+    }
+
+    // Render add-on chips + populate pricing map
+    const addonContainer = document.getElementById('addon-chips');
+    ADDON_PRICES = {};
+    if (syrups.length) {
+      addonContainer.innerHTML = syrups.map(s => {
+        ADDON_PRICES[s.name] = s.price_cents;
+        const priceLabel = s.price_cents ? ` +$${(s.price_cents/100).toFixed(2)}` : '';
+        return `<button class="chip" onclick="toggleAddon(this)" data-price="${s.price_cents}">${s.name}${priceLabel}</button>`;
+      }).join('');
+    } else {
+      addonContainer.innerHTML = '<span style="font-size:10px;color:#999;">No add-ons available</span>';
+    }
+
+  } catch(e) {
+    console.warn('Could not load addons:', e);
+    document.getElementById('milk-chips').innerHTML  = '<span style="font-size:10px;color:#999;">Unavailable</span>';
+    document.getElementById('addon-chips').innerHTML = '<span style="font-size:10px;color:#999;">Unavailable</span>';
   }
 }
 
