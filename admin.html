@@ -1888,8 +1888,11 @@
       document.getElementById('menu-item-modal-error').style.display = 'none';
 
       if (itemId) {
-        const item = allInventory.find(i => i.id === itemId);
-        if (!item) return;
+        const item = allInventory.find(i => String(i.id) === String(itemId));
+        if (!item) {
+          alert(`Could not find item with id ${itemId}. Try refreshing the Inventory tab first.`);
+          return;
+        }
         document.getElementById('menu-item-modal-title').textContent = 'Edit Item';
         document.getElementById('mi-name-input').value     = item.name || '';
         document.getElementById('mi-desc-input').value     = item.description || '';
