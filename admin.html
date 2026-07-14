@@ -750,6 +750,7 @@
                 <th>Payment</th>
                 <th>Status</th>
                 <th>Date</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody id="orders-body"></tbody>
@@ -1308,7 +1309,11 @@
               </select>
             </td>
             <td><span class="td-small">${date}</span></td>
-          </tr>`,
+            <td>
+              ${o.notes ? `<button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);padding:5px 10px;font-size:8px;" onclick="toggleNotes('${o.id}')">+ Note</button>` : '<span class="td-small">—</span>'}
+            </td>
+          </tr>
+          ${o.notes ? `<tr id="notes-row-${o.id}" class="notes-row" style="display:none;"><td colspan="9" style="background:var(--off-white);font-size:11px;padding:12px 16px;color:#555;line-height:1.6;"><strong style="color:var(--black);">Customer notes:</strong> ${o.notes}</td></tr>` : ''}`,
           card: `<div class="m-card status-${o.status}">
             <div class="m-card-header">
               <div>
@@ -1319,9 +1324,11 @@
             </div>
             <div class="m-card-row"><span class="m-card-label">Event</span><span class="m-card-val">${o.event_name || '—'}</span></div>
             <div class="m-card-row"><span class="m-card-label">Pickup</span><span class="m-card-val">${o.pickup_time || '—'}</span></div>
+            <div class="m-card-row"><span class="m-card-label">Date</span><span class="m-card-val">${date}</span></div>
             <div class="m-card-row"><span class="m-card-label">Items</span><span class="m-card-val">${items}</span></div>
             ${prefs ? `<div class="m-card-row"><span class="m-card-label">Prefs</span><span class="m-card-val">${prefs}</span></div>` : ''}
             ${addons ? `<div class="m-card-row"><span class="m-card-label">Add-ons</span><span class="m-card-val">${addons}</span></div>` : ''}
+            ${o.notes ? `<div class="m-card-row"><span class="m-card-label">Notes</span><span class="m-card-val">${o.notes}</span></div>` : ''}
             <div class="m-card-footer">
               <span style="font-size:12px;font-weight:600;">${total} · <span style="font-size:10px;color:#888;">${o.payment_method === 'pay_at_event' ? 'Pay at event' : 'Paid online'}</span></span>
               <select class="status-select" onchange="updateOrderStatus('${o.id}', this.value)">
@@ -1334,6 +1341,12 @@
 
       document.getElementById('orders-body').innerHTML  = ordersHTML.map(r => r.tableRow).join('');
       document.getElementById('orders-cards').innerHTML = ordersHTML.map(r => r.card).join('');
+    }
+
+    function toggleNotes(orderId) {
+      const row = document.getElementById(`notes-row-${orderId}`);
+      if (!row) return;
+      row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
     }
 
     async function updateOrderStatus(id, status) {
