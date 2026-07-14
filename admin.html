@@ -692,6 +692,9 @@
       <button class="tab" onclick="switchTab('events', this)">
         Events <span class="tab-badge" id="badge-events">0</span>
       </button>
+      <button class="tab" onclick="switchTab('reports', this)">
+        Reports
+      </button>
     </div>
 
     <!-- CONTENT -->
@@ -909,6 +912,73 @@
         </div>
       </div>
 
+      <!-- ── REPORTS PANEL ── -->
+      <div class="panel" id="panel-reports">
+        <div class="filter-bar">
+          <select class="filter-select" id="report-filter-status" onchange="renderReports()">
+            <option value="">All Orders (Paid + Reserved)</option>
+            <option value="paid">Paid Online Only</option>
+            <option value="reserved">Reserved (Pay at Event) Only</option>
+          </select>
+          <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="loadReports()">↻ Refresh</button>
+        </div>
+
+        <!-- OVERALL STATS -->
+        <div class="stats-row" id="report-overall-stats">
+          <div class="stat-card">
+            <div class="stat-card-label">Total Revenue</div>
+            <div class="stat-card-value" id="report-total-revenue">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Total Orders</div>
+            <div class="stat-card-value" id="report-total-orders">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Avg Order Value</div>
+            <div class="stat-card-value" id="report-avg-order">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Events Tracked</div>
+            <div class="stat-card-value" id="report-event-count">—</div>
+          </div>
+        </div>
+
+        <div class="section-label" style="margin-top:8px;">Revenue by Event</div>
+        <div class="table-wrap">
+          <div class="loading" id="reports-loading">Loading report...</div>
+          <table id="reports-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Orders</th>
+                <th>Items Sold</th>
+                <th>Revenue</th>
+                <th>Avg Order</th>
+              </tr>
+            </thead>
+            <tbody id="reports-body"></tbody>
+          </table>
+          <div class="empty-state" id="reports-empty" style="display:none;">
+            <div class="empty-state-icon">📊</div>
+            <div class="empty-state-text">No order data yet</div>
+          </div>
+        </div>
+
+        <div class="section-label" style="margin-top:28px;">Top Selling Items</div>
+        <div class="table-wrap">
+          <table id="top-items-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty Sold</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody id="top-items-body"></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1098,6 +1168,7 @@
       loadInventory();
       loadAddons();
       loadEvents();
+      loadReports();
     }
 
     function updateClock() {
@@ -1149,6 +1220,7 @@
         updateOrderStats();
         populateEventFilter();
         renderOrders();
+        renderReports(); // keep reports in sync whenever orders reload
       } catch(e) {
         document.getElementById('orders-loading').textContent = 'Failed to load orders.';
       }
@@ -1983,6 +2055,113 @@
         const errorEl = document.getElementById('menu-item-modal-error');
         errorEl.textContent = `Could not delete item: ${e.message}`;
         errorEl.style.display = 'block';
+      }
+    }
+
+
+    // ─── REPORTS / EVENT REVENUE ───────────────────────────
+    async function loadReports() {
+      document.getElementById('reports-loading').style.display = 'block';
+      document.getElementById('reports-table').style.display  = 'none';
+      document.getElementById('reports-empty').style.display  = 'none';
+      try {
+        if (!allOrders || !allOrders.length) {
+          allOrders = await supaFetch('orders?order=created_at.desc');
+        }
+        renderReports();
+      } catch (e) {
+        document.getElementById('reports-loading').textContent = `Failed to load report: ${e.message}`;
+      }
+    }
+
+    function renderReports() {
+      const statusFilter = document.getElementById('report-filter-status').value;
+      const sourceOrders = allOrders || [];
+
+      // Only count orders that represent real committed revenue: paid or reserved
+      let orders = sourceOrders.filter(o => {
+        if (statusFilter) return o.status === statusFilter;
+        return o.status === 'paid' || o.status === 'reserved';
+      });
+
+      document.getElementById('reports-loading').style.display = 'none';
+
+      // Overall stats
+      const totalRevenue = orders.reduce((sum, o) => sum + (o.total_cents || 0), 0);
+      const totalOrders  = orders.length;
+      const avgOrder     = totalOrders ? totalRevenue / totalOrders : 0;
+
+      document.getElementById('report-total-revenue').textContent = `$${(totalRevenue/100).toFixed(2)}`;
+      document.getElementById('report-total-orders').textContent  = totalOrders;
+      document.getElementById('report-avg-order').textContent     = `$${(avgOrder/100).toFixed(2)}`;
+
+      if (totalOrders === 0) {
+        document.getElementById('reports-table').style.display = 'none';
+        document.getElementById('reports-empty').style.display = 'block';
+        document.getElementById('top-items-table').style.display = 'none';
+        document.getElementById('report-event-count').textContent = '0';
+        return;
+      }
+
+      // Group by event
+      const byEvent = {};
+      orders.forEach(o => {
+        const key = o.event_name || 'Unknown Event';
+        if (!byEvent[key]) byEvent[key] = { orders: 0, itemsSold: 0, revenue: 0 };
+        byEvent[key].orders += 1;
+        byEvent[key].revenue += (o.total_cents || 0);
+        if (o.items) {
+          Object.values(o.items).forEach(item => {
+            byEvent[key].itemsSold += item.qty || 0;
+          });
+        }
+      });
+
+      document.getElementById('report-event-count').textContent = Object.keys(byEvent).length;
+
+      const rows = Object.entries(byEvent)
+        .sort((a, b) => b[1].revenue - a[1].revenue)
+        .map(([eventName, data]) => {
+          const avg = data.orders ? data.revenue / data.orders : 0;
+          return `
+          <tr>
+            <td class="td-name">${eventName}</td>
+            <td>${data.orders}</td>
+            <td>${data.itemsSold}</td>
+            <td style="font-weight:600;">$${(data.revenue/100).toFixed(2)}</td>
+            <td>$${(avg/100).toFixed(2)}</td>
+          </tr>`;
+        });
+
+      document.getElementById('reports-table').style.display = 'table';
+      document.getElementById('reports-empty').style.display = 'none';
+      document.getElementById('reports-body').innerHTML = rows.join('');
+
+      // Top selling items across filtered orders
+      const itemStats = {};
+      orders.forEach(o => {
+        if (!o.items) return;
+        Object.values(o.items).forEach(item => {
+          const key = item.name || 'Unknown Item';
+          if (!itemStats[key]) itemStats[key] = { qty: 0, revenue: 0 };
+          itemStats[key].qty += item.qty || 0;
+          itemStats[key].revenue += (item.price || 0) * (item.qty || 0);
+        });
+      });
+
+      const topItems = Object.entries(itemStats)
+        .sort((a, b) => b[1].qty - a[1].qty)
+        .slice(0, 10);
+
+      if (topItems.length) {
+        document.getElementById('top-items-table').style.display = 'table';
+        document.getElementById('top-items-body').innerHTML = topItems.map(([name, stats]) => `
+          <tr>
+            <td class="td-name">${name}</td>
+            <td>${stats.qty}</td>
+            <td>$${(stats.revenue/100).toFixed(2)}</td>
+          </tr>
+        `).join('');
       }
     }
 
