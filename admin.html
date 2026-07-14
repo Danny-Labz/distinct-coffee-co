@@ -998,11 +998,11 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Date</label>
-            <input type="date" class="form-input" id="ev-date-input" />
+            <input type="date" class="form-input" id="ev-date-input" onchange="autoFillDateText()" />
           </div>
           <div class="form-group">
             <label class="form-label">Display Date Text</label>
-            <input type="text" class="form-input" id="ev-date-text-input" placeholder="Saturday, July 19" />
+            <input type="text" class="form-input" id="ev-date-text-input" placeholder="Saturday, July 19" oninput="this.dataset.userEdited='true'" />
           </div>
         </div>
         <div class="form-group">
@@ -1663,6 +1663,7 @@
     function openEventModal(eventId) {
       editingEventId = eventId || null;
       document.getElementById('event-modal-error').style.display = 'none';
+      document.getElementById('ev-date-text-input').dataset.userEdited = 'false';
 
       if (eventId) {
         const ev = allEvents.find(e => e.id === eventId);
@@ -1675,9 +1676,23 @@
         document.getElementById('ev-active-input').checked   = !!ev.is_active;
         document.getElementById('ev-delete-btn').style.display = 'inline-block';
 
-        // Date input (YYYY-MM-DD) — try to parse from date_value or date text
-        const parsed = parseEventDate(ev);
-        document.getElementById('ev-date-input').value = parsed ? parsed.toISOString().slice(0,10) : '';
+        // Date input (YYYY-MM-DD) — use date_value directly if present, avoids timezone round-trip
+        if (ev.date_value) {
+          document.getElementById('ev-date-input').value = String(ev.date_value).slice(0,10);
+        } else {
+          const parsed = parseEventDate(ev);
+          if (parsed) {
+            const y = parsed.getFullYear();
+            const m = String(parsed.getMonth()+1).padStart(2,'0');
+            const d = String(parsed.getDate()).padStart(2,'0');
+            document.getElementById('ev-date-input').value = `${y}-${m}-${d}`;
+          } else {
+            document.getElementById('ev-date-input').value = '';
+          }
+        }
+
+        // Mark as user-edited so re-saving doesn't silently overwrite a custom display text
+        document.getElementById('ev-date-text-input').dataset.userEdited = 'true';
 
         // Cutoff datetime-local
         if (ev.order_cutoff) {
@@ -1707,6 +1722,18 @@
       editingEventId = null;
     }
 
+    function autoFillDateText() {
+      const dateInput = document.getElementById('ev-date-input').value;
+      const textField  = document.getElementById('ev-date-text-input');
+      if (!dateInput || textField.dataset.userEdited === 'true') return;
+
+      // Parse as local date to avoid timezone shift
+      const [y, m, d] = dateInput.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      const formatted = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      textField.value = formatted;
+    }
+
     async function saveEvent() {
       const errorEl = document.getElementById('event-modal-error');
       errorEl.style.display = 'none';
@@ -1720,19 +1747,18 @@
       const isActive   = document.getElementById('ev-active-input').checked;
 
       if (!name) { errorEl.textContent = 'Event name is required.'; errorEl.style.display = 'block'; return; }
+      if (!dateInput) { errorEl.textContent = 'Please select a date using the date picker (needed for the calendar view).'; errorEl.style.display = 'block'; return; }
       if (!dateText) { errorEl.textContent = 'Display date text is required (e.g. "Saturday, July 19").'; errorEl.style.display = 'block'; return; }
 
       const payload = {
         name,
         date: dateText,
+        date_value: dateInput,
         location,
         pickup_hours: hours,
         is_active: isActive,
         order_cutoff: cutoffRaw ? new Date(cutoffRaw).toISOString() : null,
       };
-
-      // Try to include date_value if the column exists (safe attempt, non-blocking if it fails)
-      if (dateInput) payload.date_value = dateInput;
 
       try {
         let res;
