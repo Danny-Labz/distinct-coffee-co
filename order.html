@@ -601,21 +601,25 @@ async function submitOrder() {
     const saved = await r.json();
     const orderId = Array.isArray(saved) ? saved[0].id : saved.id;
 
-    // Send notification email — await it so mobile doesn't cancel before redirect
-    try {
-      await fetch('/.netlify/functions/send-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'order', data: { ...orderData, pickup_pin: pin, id: orderId } }),
-      });
-    } catch(e) { console.warn('Notification failed:', e); }
-
     if (paymentMethod === 'pay_at_event') {
+      // Reserved orders are final immediately — safe to email now, and this path can't be re-triggered
+      // by a payment redirect loop since there's no external payment step.
+      try {
+        await fetch('/.netlify/functions/send-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'order', data: { ...orderData, pickup_pin: pin, id: orderId } }),
+        });
+      } catch(e) { console.warn('Notification failed:', e); }
+
       window.location.href = `confirmation.html?order_id=${orderId}&method=pay_at_event`;
       return;
     }
 
-    // Stripe checkout
+    // Pay Now — do NOT send the email here. The order is only "real" once Stripe
+    // actually confirms payment, which the stripe-webhook function handles server-side
+    // exactly once per completed checkout session. Sending it here would fire an email
+    // for every attempt, including ones where the customer backs out before paying.
     btn.textContent = 'Redirecting to payment...';
     const sr = await fetch('/.netlify/functions/create-checkout', {
       method: 'POST',
