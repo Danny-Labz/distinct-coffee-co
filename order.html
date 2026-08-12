@@ -218,19 +218,20 @@
         <label class="form-label">Select pickup window</label>
         <select class="form-select" id="pickup-time">
           <option value="">Choose a time...</option>
-          <option>9:00 AM – 9:15 AM</option>
-          <option>9:15 AM – 9:30 AM</option>
-          <option>9:30 AM – 9:45 AM</option>
-          <option>9:45 AM – 10:00 AM</option>
-          <option>10:00 AM – 10:15 AM</option>
-          <option>10:15 AM – 10:30 AM</option>
-          <option>10:30 AM – 10:45 AM</option>
-          <option>10:45 AM – 11:00 AM</option>
-          <option>11:00 AM – 11:15 AM</option>
-          <option>11:15 AM – 11:30 AM</option>
-          <option>11:30 AM – 11:45 AM</option>
-          <option>11:45 AM – 12:00 PM</option>
+          <option data-slot="9:00 AM – 9:15 AM">9:00 AM – 9:15 AM</option>
+          <option data-slot="9:15 AM – 9:30 AM">9:15 AM – 9:30 AM</option>
+          <option data-slot="9:30 AM – 9:45 AM">9:30 AM – 9:45 AM</option>
+          <option data-slot="9:45 AM – 10:00 AM">9:45 AM – 10:00 AM</option>
+          <option data-slot="10:00 AM – 10:15 AM">10:00 AM – 10:15 AM</option>
+          <option data-slot="10:15 AM – 10:30 AM">10:15 AM – 10:30 AM</option>
+          <option data-slot="10:30 AM – 10:45 AM">10:30 AM – 10:45 AM</option>
+          <option data-slot="10:45 AM – 11:00 AM">10:45 AM – 11:00 AM</option>
+          <option data-slot="11:00 AM – 11:15 AM">11:00 AM – 11:15 AM</option>
+          <option data-slot="11:15 AM – 11:30 AM">11:15 AM – 11:30 AM</option>
+          <option data-slot="11:30 AM – 11:45 AM">11:30 AM – 11:45 AM</option>
+          <option data-slot="11:45 AM – 12:00 PM">11:45 AM – 12:00 PM</option>
         </select>
+        <div id="slot-capacity-note" style="display:none;font-size:10px;color:#888;margin-top:8px;line-height:1.6;"></div>
       </div>
     </div>
     <div id="custom-time" style="display:none;">
@@ -435,8 +436,59 @@ async function loadEvent() {
     document.getElementById('event-banner').style.display = 'block';
     document.getElementById('pickup-slots').style.display = 'block';
 
+    // Check pickup slot capacity so we don't overbook any single window
+    await applySlotCapacity(activeEvent);
+
   } catch(e) {
     showCustomTime();
+  }
+}
+
+// ── SLOT CAPACITY ───────────────────────────────
+async function applySlotCapacity(event) {
+  const cap = event.max_items_per_slot;
+  if (!cap || cap <= 0) return; // no cap set — skip entirely
+
+  try {
+    // Pull all non-cancelled orders for this event to tally items already booked per slot
+    const orders = await sbFetch(`orders?event_id=eq.${event.id}&status=neq.cancelled&select=pickup_time,items`);
+
+    const slotCounts = {};
+    orders.forEach(o => {
+      if (!o.pickup_time || !o.items) return;
+      const itemCount = Object.values(o.items).reduce((sum, i) => sum + (i.qty || 0), 0);
+      slotCounts[o.pickup_time] = (slotCounts[o.pickup_time] || 0) + itemCount;
+    });
+
+    const select = document.getElementById('pickup-time');
+    const noteEl = document.getElementById('slot-capacity-note');
+    let anyFull = false;
+
+    Array.from(select.options).forEach(opt => {
+      const slot = opt.dataset.slot;
+      if (!slot) return; // skip the placeholder option
+
+      const booked = slotCounts[slot] || 0;
+      const remaining = cap - booked;
+
+      if (remaining <= 0) {
+        opt.disabled = true;
+        opt.textContent = `${slot} — FULL`;
+        anyFull = true;
+      } else {
+        opt.disabled = false;
+        opt.textContent = slot;
+      }
+    });
+
+    if (anyFull) {
+      noteEl.textContent = `We limit each pickup window to ${cap} drinks to keep wait times short — grayed-out times are full.`;
+      noteEl.style.display = 'block';
+    }
+
+  } catch (e) {
+    console.warn('Could not check slot capacity:', e);
+    // Fail open — if this check fails, don't block ordering entirely
   }
 }
 
@@ -555,6 +607,31 @@ async function submitOrder() {
   const pickupTime = hasEvent
     ? document.getElementById('pickup-time').value
     : document.getElementById('custom-datetime').value;
+
+  // Final capacity re-check right before booking — closes the race window where
+  // someone else could have filled this slot while the customer was filling out the form.
+  if (hasEvent && activeEvent.max_items_per_slot) {
+    const cartItemCount = Object.values(cart).reduce((s,i) => s + i.qty, 0);
+    try {
+      const orders = await sbFetch(`orders?event_id=eq.${activeEvent.id}&status=neq.cancelled&pickup_time=eq.${encodeURIComponent(pickupTime)}&select=items`);
+      const alreadyBooked = orders.reduce((sum, o) => {
+        if (!o.items) return sum;
+        return sum + Object.values(o.items).reduce((s,i) => s + (i.qty||0), 0);
+      }, 0);
+
+      if (alreadyBooked + cartItemCount > activeEvent.max_items_per_slot) {
+        errorEl.textContent = `That pickup window just filled up. Please choose a different time.`;
+        errorEl.style.display = 'block';
+        errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        await applySlotCapacity(activeEvent); // refresh the dropdown to reflect reality
+        return;
+      }
+    } catch(e) {
+      console.warn('Slot re-check failed, proceeding anyway:', e);
+      // Fail open rather than blocking a legitimate order over a network hiccup
+    }
+  }
+
   const location = hasEvent ? (activeEvent.location || '') : (document.getElementById('custom-location').value.trim());
   const totalCents = Object.values(cart).reduce((s,i) => s + i.price*i.qty, 0)
     + addons.reduce((s,a) => s + (ADDON_PRICES[a]||0), 0);
