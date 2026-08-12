@@ -401,13 +401,44 @@
 
     // ─── INIT ────────────────────────────────────────────
     async function init() {
-      // Find today's active event (for the "Today's Event" mode)
+      // Find TODAY's event specifically — must be active AND dated today,
+      // not just whichever event happens to be flagged active (which could
+      // be a future event still shown on the site's pre-order banner).
       try {
-        const events = await supaFetch('events?is_active=eq.true&order=created_at.desc&limit=1');
-        if (events.length) activeEventId = events[0].id;
-      } catch(e) { console.warn('Could not load active event:', e); }
+        const events = await supaFetch('events?is_active=eq.true&select=*');
+        const todayStr = getLocalDateString(new Date());
+
+        const todaysEvent = events.find(ev => {
+          if (!ev.date_value) return false;
+          return String(ev.date_value).slice(0, 10) === todayStr;
+        });
+
+        activeEventId = todaysEvent ? todaysEvent.id : null;
+
+        // Reflect availability on the toggle itself
+        const eventBtn = document.getElementById('mode-event');
+        if (!activeEventId) {
+          eventBtn.textContent = "Today's Event (none)";
+          eventBtn.disabled = true;
+          eventBtn.style.opacity = '0.4';
+          eventBtn.style.cursor = 'not-allowed';
+        } else {
+          eventBtn.textContent = "Today's Event";
+          eventBtn.disabled = false;
+          eventBtn.style.opacity = '1';
+          eventBtn.style.cursor = 'pointer';
+        }
+      } catch(e) { console.warn('Could not load today\'s event:', e); }
 
       loadNextOrder();
+    }
+
+    // Local YYYY-MM-DD, avoids UTC day-shift issues near midnight
+    function getLocalDateString(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
     }
 
     function setMode(mode) {
@@ -447,6 +478,13 @@
     // ─── AUTO QUEUE (oldest unfulfilled first) ───────────
     async function loadNextOrder() {
       const indicator = document.getElementById('queue-indicator');
+
+      if (currentMode === 'event' && !activeEventId) {
+        indicator.textContent = 'No event scheduled for today';
+        renderOrder(null);
+        return;
+      }
+
       try {
         let path = `orders?status=in.(paid,reserved)&fulfilled_at=is.null&order=created_at.asc&limit=1`;
         if (currentMode === 'event' && activeEventId) {
