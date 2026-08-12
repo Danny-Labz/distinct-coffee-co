@@ -1017,6 +1017,10 @@
           <label class="form-label">Order Cutoff (date & time)</label>
           <input type="datetime-local" class="form-input" id="ev-cutoff-input" />
         </div>
+        <div class="form-group">
+          <label class="form-label">Max Drinks Per Pickup Slot</label>
+          <input type="number" step="1" min="1" class="form-input" id="ev-slot-cap-input" placeholder="3" />
+        </div>
         <div class="form-group" style="display:flex;align-items:center;gap:10px;">
           <label class="toggle">
             <input type="checkbox" id="ev-active-input" checked />
@@ -1702,6 +1706,8 @@
         } else {
           document.getElementById('ev-cutoff-input').value = '';
         }
+
+        document.getElementById('ev-slot-cap-input').value = ev.max_items_per_slot != null ? ev.max_items_per_slot : 3;
       } else {
         document.getElementById('modal-title').textContent = 'Add Event';
         document.getElementById('ev-name-input').value = '';
@@ -1710,6 +1716,7 @@
         document.getElementById('ev-location-input').value = '';
         document.getElementById('ev-hours-input').value = '';
         document.getElementById('ev-cutoff-input').value = '';
+        document.getElementById('ev-slot-cap-input').value = 3;
         document.getElementById('ev-active-input').checked = true;
         document.getElementById('ev-delete-btn').style.display = 'none';
       }
@@ -1744,6 +1751,7 @@
       const location   = document.getElementById('ev-location-input').value.trim();
       const hours      = document.getElementById('ev-hours-input').value.trim();
       const cutoffRaw  = document.getElementById('ev-cutoff-input').value;
+      const slotCapRaw = document.getElementById('ev-slot-cap-input').value;
       const isActive   = document.getElementById('ev-active-input').checked;
 
       if (!name) { errorEl.textContent = 'Event name is required.'; errorEl.style.display = 'block'; return; }
@@ -1758,6 +1766,7 @@
         pickup_hours: hours,
         is_active: isActive,
         order_cutoff: cutoffRaw ? new Date(cutoffRaw).toISOString() : null,
+        max_items_per_slot: slotCapRaw !== '' ? parseInt(slotCapRaw) : 3,
       };
 
       try {
