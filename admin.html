@@ -430,11 +430,11 @@
       .filter-input { min-width: 0; width: 100%; }
       .refresh-btn { margin-left: 0; }
 
-      /* Hide desktop tables on mobile — EXCEPT inventory/milk/syrup, which have no mobile card view */
-      .table-wrap table:not(#inventory-table):not(#milk-table):not(#syrup-table) { display: none !important; }
+      /* Hide desktop tables on mobile — EXCEPT ones with no mobile card view */
+      .table-wrap table:not(#inventory-table):not(#milk-table):not(#syrup-table):not(#ingredients-table):not(#recipe-ingredients-table):not(#cost-drinks-table):not(#cost-supply-table) { display: none !important; }
 
       /* These tables: keep visible but make them horizontally scrollable on mobile */
-      #inventory-table, #milk-table, #syrup-table { display: table !important; font-size: 10px; }
+      #inventory-table, #milk-table, #syrup-table, #ingredients-table, #recipe-ingredients-table, #cost-drinks-table, #cost-supply-table { display: table !important; font-size: 10px; }
       .table-wrap { overflow-x: auto; }
 
       /* Show mobile cards instead */
