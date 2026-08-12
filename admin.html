@@ -1115,8 +1115,10 @@
               <thead>
                 <tr>
                   <th>Ingredient</th>
-                  <th>Unit</th>
-                  <th>Cost per Unit</th>
+                  <th>You Buy</th>
+                  <th>Purchase Cost</th>
+                  <th>Recipe Unit</th>
+                  <th>Cost / Recipe Unit</th>
                   <th></th>
                 </tr>
               </thead>
@@ -1144,18 +1146,43 @@
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">Ingredient Name</label>
-          <input type="text" class="form-input" id="ing-name-input" placeholder="Vanilla Syrup" />
+          <input type="text" class="form-input" id="ing-name-input" placeholder="Vanilla Syrup" oninput="updateCostPreview()" />
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Unit</label>
-            <input type="text" class="form-input" id="ing-unit-input" placeholder="pump, oz, each..." />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Cost per Unit ($)</label>
-            <input type="number" step="0.01" min="0" class="form-input" id="ing-cost-input" placeholder="0.15" />
+
+        <div style="background:var(--off-white);padding:14px 16px;border-radius:2px;margin-bottom:14px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);margin-bottom:12px;">What You Buy</div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Purchase Unit</label>
+              <input type="text" class="form-input" id="ing-purchase-unit-input" placeholder="bottle, gallon, bag..." oninput="updateCostPreview()" />
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Purchase Cost ($)</label>
+              <input type="number" step="0.01" min="0" class="form-input" id="ing-purchase-cost-input" placeholder="19.95" oninput="updateCostPreview()" />
+            </div>
           </div>
         </div>
+
+        <div style="background:var(--off-white);padding:14px 16px;border-radius:2px;margin-bottom:14px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mid);margin-bottom:12px;">How You Use It In Recipes</div>
+          <div class="form-row">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Recipe Unit</label>
+              <input type="text" class="form-input" id="ing-unit-input" placeholder="pump, oz, shot..." oninput="updateCostPreview()" />
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Yield (recipe units per purchase)</label>
+              <input type="number" step="0.01" min="0" class="form-input" id="ing-yield-input" placeholder="60" oninput="updateCostPreview()" />
+            </div>
+          </div>
+          <div style="font-size:10px;color:#888;margin-top:10px;line-height:1.6;">e.g. a 1000mL syrup bottle yields about 60 pumps — enter 60. A 1-gallon milk jug yields 128 oz — enter 128.</div>
+        </div>
+
+        <div id="cost-preview-box" style="background:var(--black);color:var(--white);padding:16px;border-radius:2px;margin-bottom:14px;text-align:center;">
+          <div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;opacity:0.5;margin-bottom:6px;">Calculated Cost Per Recipe Unit</div>
+          <div id="cost-preview-value" style="font-size:24px;font-weight:700;">—</div>
+        </div>
+
         <div class="msg msg-error" id="ingredient-modal-error"></div>
       </div>
       <div class="modal-footer">
@@ -2457,16 +2484,37 @@
       document.getElementById('ingredients-table').style.display = 'table';
       document.getElementById('ingredients-empty').style.display = 'none';
 
-      document.getElementById('ingredients-body').innerHTML = allIngredients.map(ing => `
+      document.getElementById('ingredients-body').innerHTML = allIngredients.map(ing => {
+        const purchaseCost = (ing.purchase_cost_cents || ing.cost_cents || 0) / 100;
+        const yieldQty = ing.yield_quantity || 1;
+        const perUnitCost = ing.cost_cents / 100;
+        return `
         <tr>
           <td class="td-name">${ing.name}</td>
-          <td>${ing.unit}</td>
-          <td>$${(ing.cost_cents/100).toFixed(2)}</td>
+          <td>${ing.purchase_unit || '—'}</td>
+          <td>$${purchaseCost.toFixed(2)}</td>
+          <td>${ing.unit} <span class="td-small">(yields ${yieldQty})</span></td>
+          <td style="font-weight:600;">$${perUnitCost.toFixed(4)}</td>
           <td>
             <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);padding:6px 12px;font-size:8px;" onclick="openIngredientModal('${ing.id}')">Edit</button>
           </td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
+    }
+
+    function updateCostPreview() {
+      const purchaseCost = parseFloat(document.getElementById('ing-purchase-cost-input').value) || 0;
+      const yieldQty     = parseFloat(document.getElementById('ing-yield-input').value) || 0;
+      const unit         = document.getElementById('ing-unit-input').value.trim() || 'unit';
+
+      const previewEl = document.getElementById('cost-preview-value');
+
+      if (purchaseCost > 0 && yieldQty > 0) {
+        const perUnit = purchaseCost / yieldQty;
+        previewEl.textContent = `$${perUnit.toFixed(4)} / ${unit}`;
+      } else {
+        previewEl.textContent = '—';
+      }
     }
 
     function openIngredientModal(id) {
@@ -2478,16 +2526,21 @@
         if (!ing) return;
         document.getElementById('ingredient-modal-title').textContent = 'Edit Ingredient';
         document.getElementById('ing-name-input').value = ing.name || '';
+        document.getElementById('ing-purchase-unit-input').value = ing.purchase_unit || '';
+        document.getElementById('ing-purchase-cost-input').value = ((ing.purchase_cost_cents || ing.cost_cents || 0)/100).toFixed(2);
         document.getElementById('ing-unit-input').value = ing.unit || '';
-        document.getElementById('ing-cost-input').value = (ing.cost_cents/100).toFixed(2);
+        document.getElementById('ing-yield-input').value = ing.yield_quantity || 1;
         document.getElementById('ing-delete-btn').style.display = 'inline-block';
       } else {
         document.getElementById('ingredient-modal-title').textContent = 'Add Ingredient';
         document.getElementById('ing-name-input').value = '';
+        document.getElementById('ing-purchase-unit-input').value = '';
+        document.getElementById('ing-purchase-cost-input').value = '';
         document.getElementById('ing-unit-input').value = '';
-        document.getElementById('ing-cost-input').value = '';
+        document.getElementById('ing-yield-input').value = '';
         document.getElementById('ing-delete-btn').style.display = 'none';
       }
+      updateCostPreview();
       document.getElementById('ingredient-modal-overlay').style.display = 'flex';
     }
 
@@ -2500,15 +2553,28 @@
       const errorEl = document.getElementById('ingredient-modal-error');
       errorEl.style.display = 'none';
 
-      const name = document.getElementById('ing-name-input').value.trim();
-      const unit = document.getElementById('ing-unit-input').value.trim();
-      const costRaw = document.getElementById('ing-cost-input').value;
+      const name         = document.getElementById('ing-name-input').value.trim();
+      const purchaseUnit = document.getElementById('ing-purchase-unit-input').value.trim();
+      const purchaseCost = parseFloat(document.getElementById('ing-purchase-cost-input').value);
+      const unit         = document.getElementById('ing-unit-input').value.trim();
+      const yieldQty      = parseFloat(document.getElementById('ing-yield-input').value);
 
       if (!name) { errorEl.textContent = 'Name is required.'; errorEl.style.display = 'block'; return; }
-      if (!unit) { errorEl.textContent = 'Unit is required (e.g. oz, each, pump).'; errorEl.style.display = 'block'; return; }
-      if (costRaw === '' || isNaN(parseFloat(costRaw))) { errorEl.textContent = 'Please enter a valid cost.'; errorEl.style.display = 'block'; return; }
+      if (!purchaseUnit) { errorEl.textContent = 'Purchase unit is required (e.g. bottle, gallon, bag).'; errorEl.style.display = 'block'; return; }
+      if (isNaN(purchaseCost) || purchaseCost <= 0) { errorEl.textContent = 'Please enter a valid purchase cost.'; errorEl.style.display = 'block'; return; }
+      if (!unit) { errorEl.textContent = 'Recipe unit is required (e.g. oz, pump, shot).'; errorEl.style.display = 'block'; return; }
+      if (isNaN(yieldQty) || yieldQty <= 0) { errorEl.textContent = 'Please enter how many recipe units this purchase yields (e.g. 128 for a gallon in oz).'; errorEl.style.display = 'block'; return; }
 
-      const payload = { name, unit, cost_cents: Math.round(parseFloat(costRaw) * 100) };
+      const perUnitCostCents = Math.round((purchaseCost * 100) / yieldQty);
+
+      const payload = {
+        name,
+        purchase_unit: purchaseUnit,
+        purchase_cost_cents: Math.round(purchaseCost * 100),
+        unit,
+        yield_quantity: yieldQty,
+        cost_cents: perUnitCostCents, // auto-calculated — this is what recipes actually use
+      };
 
       try {
         let res;
