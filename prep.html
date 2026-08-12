@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Prep View — Distinct. Coffee Co.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    a, button { -webkit-tap-highlight-color: transparent; outline: none; }
+
+    :root {
+      --black: #0a0a0a;
+      --white: #f8f6f2;
+      --off-white: #eeebe5;
+      --mid: #c8c3bb;
+      --green: #2e7d32;
+      --green-bg: #e8f5e9;
+      --yellow: #f57f17;
+      --yellow-bg: #fff8e1;
+      --blue: #1565c0;
+      --blue-bg: #e3f2fd;
+    }
+
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: var(--off-white);
+    }
+    .login-card {
+      background: var(--white);
+      padding: 48px 40px;
+      border-radius: 4px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+    .login-logo { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--mid); margin-bottom: 8px; }
+    .login-title { font-size: 22px; font-weight: 200; margin-bottom: 32px; color: var(--black); }
+    .login-input {
+      width: 100%; background: var(--off-white); border: 1px solid transparent; border-radius: 2px;
+      padding: 13px 16px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 300;
+      color: var(--black); outline: none; margin-bottom: 12px; text-align: center; letter-spacing: 4px;
+    }
+    .login-btn {
+      width: 100%; background: var(--black); color: var(--white); border: none; padding: 14px;
+      font-family: 'Montserrat', sans-serif; font-size: 9px; font-weight: 600; letter-spacing: 2.5px;
+      text-transform: uppercase; cursor: pointer; border-radius: 2px;
+    }
+    .login-error { display: none; margin-top: 12px; font-size: 11px; color: #c62828; letter-spacing: 0.5px; }
+
+    /* ── PREP VIEW ── */
+    #prep-screen { display: none; min-height: 100vh; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(248,246,242,0.1);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+    .back-link {
+      color: rgba(248,246,242,0.5);
+      text-decoration: none;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .topbar-title { font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: rgba(248,246,242,0.4); }
+
+    /* MODE TOGGLE */
+    .mode-toggle {
+      display: flex;
+      gap: 8px;
+      padding: 16px 20px 0;
+    }
+    .mode-btn {
+      flex: 1;
+      background: rgba(248,246,242,0.06);
+      border: 1px solid rgba(248,246,242,0.12);
+      color: rgba(248,246,242,0.6);
+      padding: 12px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .mode-btn.active {
+      background: var(--white);
+      color: var(--black);
+      border-color: var(--white);
+    }
+
+    /* PIN INPUT */
+    .pin-search {
+      padding: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    .pin-search input {
+      flex: 1;
+      background: rgba(248,246,242,0.08);
+      border: 1px solid rgba(248,246,242,0.15);
+      color: var(--white);
+      padding: 16px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 8px;
+      text-align: center;
+      border-radius: 2px;
+      outline: none;
+    }
+    .pin-search input:focus { border-color: rgba(248,246,242,0.4); }
+    .pin-search input::placeholder { color: rgba(248,246,242,0.25); letter-spacing: 4px; font-size: 14px; font-weight: 400; }
+    .pin-clear-btn {
+      background: rgba(248,246,242,0.08);
+      border: 1px solid rgba(248,246,242,0.15);
+      color: var(--white);
+      padding: 0 20px;
+      font-size: 18px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    /* QUEUE INDICATOR */
+    .queue-indicator {
+      text-align: center;
+      font-size: 9px;
+      color: rgba(248,246,242,0.35);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 0 20px 8px;
+    }
+
+    /* ORDER DISPLAY */
+    #order-display { padding: 12px 20px 40px; }
+
+    .empty-queue {
+      text-align: center;
+      padding: 80px 24px;
+      color: rgba(248,246,242,0.3);
+    }
+    .empty-queue-icon { font-size: 40px; margin-bottom: 16px; }
+    .empty-queue-text { font-size: 13px; letter-spacing: 0.5px; }
+
+    .order-card {
+      background: rgba(248,246,242,0.04);
+      border: 1px solid rgba(248,246,242,0.1);
+      border-radius: 6px;
+      padding: 28px 24px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .order-pin-huge {
+      font-size: 56px;
+      font-weight: 800;
+      letter-spacing: 12px;
+      text-align: center;
+      margin-bottom: 4px;
+      line-height: 1;
+    }
+    .order-pin-label {
+      text-align: center;
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(248,246,242,0.35);
+      margin-bottom: 24px;
+    }
+
+    .order-customer-name {
+      font-size: 28px;
+      font-weight: 300;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .order-meta-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: rgba(248,246,242,0.5);
+      letter-spacing: 0.5px;
+      margin-bottom: 24px;
+    }
+    .order-meta-row span:not(:last-child)::after { content: '·'; margin-left: 10px; color: rgba(248,246,242,0.25); }
+
+    .items-block {
+      background: rgba(248,246,242,0.06);
+      border-radius: 4px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .item-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 22px;
+      font-weight: 500;
+      padding: 8px 0;
+    }
+    .item-qty {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--white);
+      min-width: 32px;
+    }
+    .item-name { flex: 1; margin-left: 12px; }
+
+    .detail-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .detail-chip {
+      background: rgba(248,246,242,0.08);
+      border: 1px solid rgba(248,246,242,0.15);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+    .detail-chip.addon { background: var(--yellow-bg); color: var(--yellow); border-color: transparent; }
+    .detail-chip.milk { background: var(--blue-bg); color: var(--blue); border-color: transparent; }
+
+    .order-notes {
+      background: var(--yellow-bg);
+      color: #7a5200;
+      padding: 14px 16px;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .order-notes strong { display: block; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; opacity: 0.7; }
+
+    .order-status-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border-radius: 2px;
+      margin-bottom: 20px;
+    }
+    .order-status-badge.paid { background: var(--green-bg); color: var(--green); }
+    .order-status-badge.reserved { background: var(--blue-bg); color: var(--blue); }
+    .order-status-badge.pending { background: var(--yellow-bg); color: var(--yellow); }
+
+    .fulfill-btn {
+      width: 100%;
+      background: var(--green);
+      color: white;
+      border: none;
+      padding: 20px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .fulfill-btn:hover { background: #276b2c; }
+    .fulfill-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error-msg {
+      display: none;
+      background: #ffebee;
+      color: #c62828;
+      padding: 14px 16px;
+      border-radius: 4px;
+      font-size: 12px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 420px) {
+      .order-pin-huge { font-size: 42px; letter-spacing: 8px; }
+      .order-customer-name { font-size: 22px; }
+      .item-line, .item-qty { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-logo">Distinct. Coffee Co.</div>
+      <div class="login-title">Prep View</div>
+      <input type="password" class="login-input" id="password-input" placeholder="••••••••" onkeydown="if(event.key==='Enter') login()" />
+      <button class="login-btn" onclick="login()">Enter</button>
+      <div class="login-error" id="login-error">Incorrect password. Try again.</div>
+    </div>
+  </div>
+
+  <!-- PREP SCREEN -->
+  <div id="prep-screen">
+    <div class="topbar">
+      <div class="topbar-left">
+        <a href="admin.html" class="back-link">← Admin</a>
+      </div>
+      <div class="topbar-title">Prep View</div>
+    </div>
+
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="mode-all" onclick="setMode('all')">All Unfulfilled</button>
+      <button class="mode-btn" id="mode-event" onclick="setMode('event')">Today's Event</button>
+    </div>
+
+    <div class="pin-search">
+      <input type="text" id="pin-input" placeholder="Enter 4-digit PIN" inputmode="numeric" maxlength="4"
+             oninput="this.value=this.value.replace(/[^0-9]/g,''); if(this.value.length===4) lookupPin(this.value);" />
+      <button class="pin-clear-btn" onclick="clearPin()">×</button>
+    </div>
+
+    <div class="queue-indicator" id="queue-indicator"></div>
+    <div class="error-msg" id="error-msg"></div>
+
+    <div id="order-display"></div>
+  </div>
+
+  <script>
+    const SUPABASE_URL      = 'https://qjsitqvfimwiuoojsoge.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqc2l0cXZmaW13aXVvb2pzb2dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MzAwNzUsImV4cCI6MjA5ODUwNjA3NX0.p2qXO5-Z6uWd7n7slhHJT_s2NDvjRlsOMQLqCRxFIcU';
+    const ADMIN_PASSWORD    = 'distinct2024';
+
+    let currentMode = 'all'; // 'all' or 'event'
+    let currentOrder = null;
+    let activeEventId = null;
+
+    // ─── AUTH ────────────────────────────────────────────
+    function login() {
+      const pw = document.getElementById('password-input').value;
+      if (pw === ADMIN_PASSWORD) {
+        sessionStorage.setItem('prep_auth', 'true');
+        showPrepScreen();
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+        document.getElementById('password-input').value = '';
+      }
+    }
+
+    if (sessionStorage.getItem('prep_auth') === 'true') {
+      showPrepScreen();
+    }
+
+    function showPrepScreen() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('prep-screen').style.display = 'block';
+      init();
+    }
+
+    // ─── SUPABASE HELPER ─────────────────────────────────
+    async function supaFetch(path) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+      return res.json();
+    }
+
+    async function supaUpdate(id, data) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify(data),
+      });
+      return res.ok;
+    }
+
+    // ─── INIT ────────────────────────────────────────────
+    async function init() {
+      // Find today's active event (for the "Today's Event" mode)
+      try {
+        const events = await supaFetch('events?is_active=eq.true&order=created_at.desc&limit=1');
+        if (events.length) activeEventId = events[0].id;
+      } catch(e) { console.warn('Could not load active event:', e); }
+
+      loadNextOrder();
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('mode-all').classList.toggle('active', mode === 'all');
+      document.getElementById('mode-event').classList.toggle('active', mode === 'event');
+      clearPin();
+    }
+
+    function clearPin() {
+      document.getElementById('pin-input').value = '';
+      document.getElementById('error-msg').style.display = 'none';
+      loadNextOrder();
+    }
+
+    // ─── LOOKUP BY PIN ───────────────────────────────────
+    async function lookupPin(pin) {
+      const errorEl = document.getElementById('error-msg');
+      errorEl.style.display = 'none';
+      document.getElementById('queue-indicator').textContent = '';
+
+      try {
+        const orders = await supaFetch(`orders?pickup_pin=eq.${pin}&order=created_at.desc&limit=1`);
+        if (!orders.length) {
+          errorEl.textContent = `No order found with PIN ${pin}.`;
+          errorEl.style.display = 'block';
+          renderOrder(null);
+          return;
+        }
+        renderOrder(orders[0]);
+      } catch(e) {
+        errorEl.textContent = 'Could not look up that PIN. Please try again.';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    // ─── AUTO QUEUE (oldest unfulfilled first) ───────────
+    async function loadNextOrder() {
+      const indicator = document.getElementById('queue-indicator');
+      try {
+        let path = `orders?status=in.(paid,reserved)&fulfilled_at=is.null&order=created_at.asc&limit=1`;
+        if (currentMode === 'event' && activeEventId) {
+          path = `orders?status=in.(paid,reserved)&fulfilled_at=is.null&event_id=eq.${activeEventId}&order=created_at.asc&limit=1`;
+        }
+
+        const orders = await supaFetch(path);
+
+        if (!orders.length) {
+          indicator.textContent = currentMode === 'event' ? "No pending orders for today's event" : 'No pending orders in queue';
+          renderOrder(null);
+          return;
+        }
+
+        // Count how many are behind this one
+        let countPath = `orders?status=in.(paid,reserved)&fulfilled_at=is.null&select=id`;
+        if (currentMode === 'event' && activeEventId) countPath += `&event_id=eq.${activeEventId}`;
+        const allPending = await supaFetch(countPath);
+
+        indicator.textContent = `Next in queue · ${allPending.length} pending`;
+        renderOrder(orders[0]);
+
+      } catch(e) {
+        indicator.textContent = '';
+        console.warn('Could not load queue:', e);
+      }
+    }
+
+    // ─── RENDER ORDER ─────────────────────────────────────
+    function renderOrder(order) {
+      currentOrder = order;
+      const container = document.getElementById('order-display');
+
+      if (!order) {
+        container.innerHTML = `
+          <div class="empty-queue">
+            <div class="empty-queue-icon">☕</div>
+            <div class="empty-queue-text">All caught up — no orders waiting.</div>
+          </div>`;
+        return;
+      }
+
+      const items = order.items ? Object.values(order.items) : [];
+      const itemLines = items.map(i => `
+        <div class="item-line">
+          <span class="item-qty">${i.qty}×</span>
+          <span class="item-name">${i.name}</span>
+        </div>`).join('');
+
+      const chips = [];
+      if (order.milk_pref) chips.push(`<span class="detail-chip milk">${order.milk_pref}</span>`);
+      if (order.temp_pref) chips.push(`<span class="detail-chip milk">${order.temp_pref}</span>`);
+      if (order.addons && order.addons.length) {
+        order.addons.forEach(a => chips.push(`<span class="detail-chip addon">+ ${a}</span>`));
+      }
+
+      const statusLabel = order.payment_method === 'pay_at_event' ? 'reserved' : (order.status || 'paid');
+      const statusText  = statusLabel === 'reserved' ? 'Pay at Pickup' : statusLabel === 'paid' ? 'Paid Online' : statusLabel;
+
+      container.innerHTML = `
+        <div class="order-card">
+          <div class="order-pin-huge">${order.pickup_pin || '----'}</div>
+          <div class="order-pin-label">Pickup PIN</div>
+
+          <div class="order-customer-name">${order.customer_name || 'Guest'}</div>
+          <div class="order-meta-row">
+            <span>${order.pickup_time || 'No time set'}</span>
+            <span>${order.event_name || ''}</span>
+          </div>
+
+          <div style="text-align:center;">
+            <span class="order-status-badge ${statusLabel}">${statusText}</span>
+          </div>
+
+          <div class="items-block">
+            ${itemLines || '<div style="opacity:0.4;font-size:13px;">No items listed</div>'}
+          </div>
+
+          ${chips.length ? `<div class="detail-chips">${chips.join('')}</div>` : ''}
+
+          ${order.notes ? `<div class="order-notes"><strong>Customer Notes</strong>${order.notes}</div>` : ''}
+
+          <button class="fulfill-btn" id="fulfill-btn" onclick="markFulfilled('${order.id}')">
+            ✓ Mark Fulfilled — Next Order
+          </button>
+        </div>`;
+    }
+
+    // ─── MARK FULFILLED ────────────────────────────────────
+    async function markFulfilled(orderId) {
+      const btn = document.getElementById('fulfill-btn');
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+
+      try {
+        await supaUpdate(orderId, {
+          status: 'fulfilled',
+          fulfilled_at: new Date().toISOString(),
+        });
+
+        // Clear PIN field and advance to next in queue automatically
+        document.getElementById('pin-input').value = '';
+        loadNextOrder();
+
+      } catch(e) {
+        btn.disabled = false;
+        btn.textContent = '✓ Mark Fulfilled — Next Order';
+        document.getElementById('error-msg').textContent = 'Could not update order. Please try again.';
+        document.getElementById('error-msg').style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
