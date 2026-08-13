@@ -212,6 +212,12 @@
       padding: 20px;
       margin-bottom: 16px;
     }
+    .item-line-wrap {
+      border-bottom: 1px solid rgba(248,246,242,0.08);
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+    }
+    .item-line-wrap:last-child { border-bottom: none; margin-bottom: 0; }
     .item-line {
       display: flex;
       justify-content: space-between;
@@ -226,6 +232,56 @@
       color: var(--white);
       min-width: 32px;
     }
+
+    .recipe-toggle-btn {
+      background: rgba(248,246,242,0.1);
+      border: 1px solid rgba(248,246,242,0.2);
+      color: rgba(248,246,242,0.7);
+      padding: 6px 14px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .recipe-toggle-btn.active {
+      background: var(--blue-bg);
+      color: var(--blue);
+      border-color: transparent;
+    }
+
+    .recipe-block {
+      background: rgba(248,246,242,0.05);
+      border-left: 2px solid rgba(248,246,242,0.2);
+      border-radius: 0 4px 4px 0;
+      padding: 10px 14px;
+      margin: 0 0 10px;
+    }
+    .recipe-block.recipe-missing {
+      font-size: 11px;
+      color: var(--yellow);
+      font-style: italic;
+      border-left-color: var(--yellow);
+    }
+    .recipe-line {
+      display: flex;
+      gap: 10px;
+      font-size: 13px;
+      padding: 3px 0;
+      color: rgba(248,246,242,0.75);
+    }
+    .recipe-line.recipe-addon {
+      color: var(--yellow);
+    }
+    .recipe-qty {
+      font-weight: 700;
+      min-width: 60px;
+      color: rgba(248,246,242,0.95);
+    }
+    .recipe-line.recipe-addon .recipe-qty { color: var(--yellow); }
+    .recipe-name { flex: 1; }
     .item-name { flex: 1; margin-left: 12px; }
 
     .detail-chips {
@@ -430,6 +486,7 @@
         }
       } catch(e) { console.warn('Could not load today\'s event:', e); }
 
+      loadRecipeData(); // fire and forget — populates cache for when the toggle is used
       loadNextOrder();
     }
 
@@ -514,6 +571,81 @@
     }
 
     // ─── RENDER ORDER ─────────────────────────────────────
+    // ── RECIPE DATA (loaded once, cached) ──────────────────
+    let allRecipeItems = null;
+    let allIngredientsMap = null;
+    let showRecipes = false;
+
+    async function loadRecipeData() {
+      if (allRecipeItems && allIngredientsMap) return; // already cached
+      try {
+        const [recipes, ingredients] = await Promise.all([
+          supaFetch('recipe_items?select=*'),
+          supaFetch('ingredients?select=*'),
+        ]);
+        allIngredientsMap = {};
+        ingredients.forEach(i => allIngredientsMap[i.id] = i);
+
+        allRecipeItems = {};
+        recipes.forEach(ri => {
+          if (!allRecipeItems[ri.menu_item_id]) allRecipeItems[ri.menu_item_id] = [];
+          allRecipeItems[ri.menu_item_id].push(ri);
+        });
+      } catch(e) {
+        console.warn('Could not load recipe data:', e);
+        allRecipeItems = {};
+        allIngredientsMap = {};
+      }
+    }
+
+    function toggleRecipeView() {
+      showRecipes = !showRecipes;
+      renderOrder(currentOrder);
+    }
+
+    // Build the actual recipe for THIS order's item, accounting for
+    // milk substitution and add-ons the customer selected.
+    function buildAdjustedRecipe(itemId, qty, order) {
+      const baseRecipe = (allRecipeItems && allRecipeItems[itemId]) || [];
+      if (!baseRecipe.length) return null; // no recipe defined for this item
+
+      const milkPrefMap = {
+        'Dairy':   'Whole Milk',
+        'Oat':     'Oat Milk',
+        'Almond':  'Almond Milk',
+      };
+
+      let lines = baseRecipe.map(ri => {
+        const ing = allIngredientsMap[ri.ingredient_id];
+        if (!ing) return null;
+        return { name: ing.name, unit: ing.unit, qty: parseFloat(ri.quantity) };
+      }).filter(Boolean);
+
+      // Milk substitution — swap any ingredient whose name contains "Milk"
+      if (order.milk_pref) {
+        if (order.milk_pref === 'No Milk') {
+          lines = lines.filter(l => !l.name.includes('Milk'));
+        } else if (milkPrefMap[order.milk_pref]) {
+          const targetMilk = milkPrefMap[order.milk_pref];
+          lines = lines.map(l => l.name.includes('Milk') ? { ...l, name: targetMilk } : l);
+        }
+      }
+
+      // Add-ons — append extra lines for what the customer actually chose
+      if (order.addons && order.addons.length) {
+        order.addons.forEach(addon => {
+          if (addon === 'Extra Shot') {
+            lines.push({ name: 'Espresso Shot', unit: 'shot', qty: 1, isAddon: true });
+          } else if (addon.includes('Syrup')) {
+            lines.push({ name: addon, unit: 'pump', qty: 1, isAddon: true });
+          }
+        });
+      }
+
+      // Scale by quantity ordered
+      return lines.map(l => ({ ...l, totalQty: l.qty * qty }));
+    }
+
     function renderOrder(order) {
       currentOrder = order;
       const container = document.getElementById('order-display');
@@ -527,12 +659,36 @@
         return;
       }
 
-      const items = order.items ? Object.values(order.items) : [];
-      const itemLines = items.map(i => `
-        <div class="item-line">
-          <span class="item-qty">${i.qty}×</span>
-          <span class="item-name">${i.name}</span>
-        </div>`).join('');
+      const items = order.items ? Object.entries(order.items) : [];
+
+      const itemLines = items.map(([itemId, i]) => {
+        let recipeHtml = '';
+        if (showRecipes) {
+          const recipe = buildAdjustedRecipe(itemId, i.qty, order);
+          if (recipe && recipe.length) {
+            recipeHtml = `
+              <div class="recipe-block">
+                ${recipe.map(r => `
+                  <div class="recipe-line ${r.isAddon ? 'recipe-addon' : ''}">
+                    <span class="recipe-qty">${r.totalQty % 1 === 0 ? r.totalQty : r.totalQty.toFixed(2)} ${r.unit}</span>
+                    <span class="recipe-name">${r.name}</span>
+                  </div>
+                `).join('')}
+              </div>`;
+          } else {
+            recipeHtml = `<div class="recipe-block recipe-missing">No recipe set for this item yet</div>`;
+          }
+        }
+
+        return `
+          <div class="item-line-wrap">
+            <div class="item-line">
+              <span class="item-qty">${i.qty}×</span>
+              <span class="item-name">${i.name}</span>
+            </div>
+            ${recipeHtml}
+          </div>`;
+      }).join('');
 
       const chips = [];
       if (order.milk_pref) chips.push(`<span class="detail-chip milk">${order.milk_pref}</span>`);
@@ -555,8 +711,11 @@
             <span>${order.event_name || ''}</span>
           </div>
 
-          <div style="text-align:center;">
+          <div style="text-align:center;display:flex;gap:8px;justify-content:center;align-items:center;">
             <span class="order-status-badge ${statusLabel}">${statusText}</span>
+            <button class="recipe-toggle-btn ${showRecipes ? 'active' : ''}" onclick="toggleRecipeView()">
+              ${showRecipes ? '✓ Recipe View' : '📋 Show Recipe'}
+            </button>
           </div>
 
           <div class="items-block">
