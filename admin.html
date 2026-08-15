@@ -897,6 +897,23 @@
           <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="loadEvents()">↻ Refresh</button>
         </div>
 
+        <!-- ORDER QR CODE -->
+        <div style="background:var(--black);border-radius:6px;padding:24px;margin-bottom:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+          <div style="background:var(--white);padding:12px;border-radius:6px;flex-shrink:0;">
+            <img id="order-qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https%3A%2F%2Fdistinctcoffeeco.com%2Forder.html" width="140" height="140" alt="Order page QR code" style="display:block;" />
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(248,246,242,0.4);margin-bottom:8px;">Scan to Order</div>
+            <div style="font-size:13px;color:var(--white);line-height:1.6;margin-bottom:16px;">
+              Print this once and reuse it at every event — it always routes customers to whichever event is currently active.
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <a id="order-qr-download" href="https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=https%3A%2F%2Fdistinctcoffeeco.com%2Forder.html" download="distinct-coffee-order-qr.png" class="refresh-btn" style="text-decoration:none;display:inline-block;">↓ Download High-Res</a>
+              <button class="refresh-btn" style="background:transparent;color:var(--white);border:1px solid rgba(248,246,242,0.3);" onclick="window.open('https://distinctcoffeeco.com/order.html', '_blank')">Preview Link →</button>
+            </div>
+          </div>
+        </div>
+
         <!-- CALENDAR GRID -->
         <div class="cal-wrap">
           <div class="cal-grid cal-grid-header">
