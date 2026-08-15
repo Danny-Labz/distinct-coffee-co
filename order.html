@@ -46,12 +46,48 @@
       text-transform: uppercase; color: var(--mid);
     }
 
+    /* STICKY TOTAL BAR */
+    .sticky-total-bar {
+      position: fixed;
+      top: 58px; left: 0; right: 0;
+      z-index: 99;
+      background: var(--black);
+      color: var(--white);
+      padding: 14px 24px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .sticky-total-bar.visible { display: flex; }
+    .sticky-total-bar:active { transform: scale(0.98); }
+    .sticky-total-left {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sticky-total-count {
+      background: rgba(248,246,242,0.15);
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+    }
+    .sticky-total-label {
+      font-size: 12px; font-weight: 500; letter-spacing: 0.3px;
+    }
+    .sticky-total-amount {
+      font-size: 17px; font-weight: 700;
+    }
+    .sticky-total-arrow {
+      font-size: 12px; opacity: 0.5; margin-left: 8px;
+    }
+
     /* MAIN */
-    main { max-width: 640px; margin: 0 auto; padding: 100px 24px 80px; }
+    main { max-width: 640px; margin: 0 auto; padding: 148px 24px 100px; }
 
     /* SECTION LABEL */
     .section-label {
-      font-size: 8.5px; font-weight: 700; letter-spacing: 3px;
+      font-size: 10px; font-weight: 700; letter-spacing: 2.5px;
       text-transform: uppercase; color: var(--mid);
       margin-bottom: 16px; padding-bottom: 10px;
       border-bottom: 1px solid var(--off-white);
@@ -62,37 +98,38 @@
     .menu-item {
       display: flex; align-items: center;
       justify-content: space-between;
-      padding: 14px 0; border-bottom: 1px solid var(--off-white);
-      gap: 12px;
+      padding: 18px 0; border-bottom: 1px solid var(--off-white);
+      gap: 14px;
     }
     .menu-item:last-child { border-bottom: none; }
-    .item-name { font-size: 13px; font-weight: 400; }
-    .item-desc { font-size: 10px; color: var(--mid); margin-top: 2px; }
-    .item-price { font-size: 11px; font-weight: 500; min-width: 44px; text-align: right; }
+    .item-name { font-size: 17px; font-weight: 500; line-height: 1.3; }
+    .item-desc { font-size: 12px; color: var(--mid); margin-top: 3px; }
+    .item-price { font-size: 15px; font-weight: 600; min-width: 54px; text-align: right; }
 
     /* QTY */
     .qty-control {
       display: flex; align-items: center;
-      border: 1px solid var(--border); border-radius: 2px; overflow: hidden;
+      border: 1.5px solid var(--border); border-radius: 4px; overflow: hidden;
+      flex-shrink: 0;
     }
     .qty-btn {
-      width: 32px; height: 32px; background: none; border: none;
-      font-size: 18px; font-weight: 300; cursor: pointer; color: var(--black);
-      transition: background 0.2s; display: flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; background: none; border: none;
+      font-size: 22px; font-weight: 400; cursor: pointer; color: var(--black);
+      transition: background 0.15s; display: flex; align-items: center; justify-content: center;
     }
-    .qty-btn:hover { background: var(--off-white); }
+    .qty-btn:active { background: var(--black); color: var(--white); }
     .qty-display {
-      width: 34px; text-align: center; font-size: 12px; font-weight: 500;
-      border-left: 1px solid var(--border); border-right: 1px solid var(--border);
-      line-height: 32px;
+      width: 40px; text-align: center; font-size: 17px; font-weight: 700;
+      border-left: 1.5px solid var(--border); border-right: 1.5px solid var(--border);
+      line-height: 44px;
     }
 
     /* CHIPS */
-    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 26px; }
     .chip {
-      font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
-      text-transform: uppercase; padding: 8px 14px;
-      border: 1px solid var(--border); border-radius: 2px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase; padding: 12px 18px;
+      border: 1.5px solid var(--border); border-radius: 4px;
       cursor: pointer; background: none; color: var(--black);
       font-family: 'Montserrat', sans-serif;
       transition: background 0.2s, border-color 0.2s, color 0.2s;
@@ -101,17 +138,17 @@
     .chip:hover:not(.active) { background: var(--off-white); }
 
     /* FORM */
-    .form-group { margin-bottom: 14px; }
+    .form-group { margin-bottom: 16px; }
     .form-label {
-      display: block; font-size: 8px; font-weight: 700;
-      letter-spacing: 2.5px; text-transform: uppercase;
-      color: var(--mid); margin-bottom: 7px;
+      display: block; font-size: 10px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--mid); margin-bottom: 8px;
     }
     .form-input, .form-select, .form-textarea {
       width: 100%; background: var(--off-white);
-      border: 1px solid transparent; border-radius: 2px;
-      padding: 12px 14px; font-family: 'Montserrat', sans-serif;
-      font-size: 12px; font-weight: 300; color: var(--black);
+      border: 1.5px solid transparent; border-radius: 4px;
+      padding: 15px 16px; font-family: 'Montserrat', sans-serif;
+      font-size: 16px; font-weight: 400; color: var(--black);
       outline: none; transition: border-color 0.2s;
     }
     .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--black); }
@@ -120,43 +157,43 @@
 
     /* SUMMARY */
     .summary-box {
-      background: var(--off-white); padding: 20px 22px;
-      border-radius: 2px; margin-bottom: 20px;
+      background: var(--off-white); padding: 22px 24px;
+      border-radius: 4px; margin-bottom: 20px;
     }
     .summary-row {
       display: flex; justify-content: space-between;
-      font-size: 11px; padding: 5px 0; color: #555;
+      font-size: 14px; padding: 7px 0; color: #444;
     }
     .summary-row.total {
-      font-size: 13px; font-weight: 600; color: var(--black);
-      border-top: 1px solid rgba(10,10,10,0.1);
-      margin-top: 8px; padding-top: 12px;
+      font-size: 19px; font-weight: 700; color: var(--black);
+      border-top: 1.5px solid rgba(10,10,10,0.12);
+      margin-top: 10px; padding-top: 14px;
     }
-    .summary-empty { font-size: 11px; color: var(--mid); text-align: center; padding: 8px 0; }
+    .summary-empty { font-size: 13px; color: var(--mid); text-align: center; padding: 10px 0; }
 
     /* PAYMENT OPTIONS */
-    .payment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .payment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
     .payment-opt {
       background: var(--off-white); border: 2px solid transparent;
-      border-radius: 2px; padding: 16px 14px; text-align: left;
+      border-radius: 4px; padding: 18px 16px; text-align: left;
       cursor: pointer; transition: border-color 0.2s, background 0.2s;
       font-family: 'Montserrat', sans-serif;
     }
     .payment-opt.active { border-color: var(--black); background: var(--white); }
-    .payment-opt-title { font-size: 11px; font-weight: 600; margin-bottom: 4px; }
-    .payment-opt-desc { font-size: 9.5px; color: #888; line-height: 1.6; font-weight: 300; }
+    .payment-opt-title { font-size: 14px; font-weight: 700; margin-bottom: 5px; }
+    .payment-opt-desc { font-size: 11.5px; color: #777; line-height: 1.6; font-weight: 400; }
 
     /* SUBMIT */
     .btn-submit {
       width: 100%; background: var(--black); color: var(--white);
-      border: none; padding: 17px; font-family: 'Montserrat', sans-serif;
-      font-size: 9.5px; font-weight: 700; letter-spacing: 2.5px;
-      text-transform: uppercase; cursor: pointer; border-radius: 2px;
+      border: none; padding: 20px; font-family: 'Montserrat', sans-serif;
+      font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; cursor: pointer; border-radius: 4px;
       transition: background 0.2s;
     }
     .btn-submit:hover:not(:disabled) { background: #222; }
     .btn-submit:disabled { opacity: 0.35; cursor: not-allowed; }
-    .secure-note { text-align: center; font-size: 9px; color: var(--mid); margin-top: 10px; letter-spacing: 0.5px; }
+    .secure-note { text-align: center; font-size: 11px; color: var(--mid); margin-top: 12px; letter-spacing: 0.3px; }
 
     /* MESSAGES */
     .msg {
@@ -186,6 +223,17 @@
   <a href="index.html" class="nav-back">← Back</a>
   <span class="nav-title">Place an Order</span>
 </nav>
+
+<div class="sticky-total-bar" id="sticky-total-bar" onclick="scrollToSummary()">
+  <div class="sticky-total-left">
+    <div class="sticky-total-count" id="sticky-total-count">0</div>
+    <div class="sticky-total-label">items · tap to review</div>
+  </div>
+  <div class="sticky-total-left">
+    <div class="sticky-total-amount" id="sticky-total-amount">$0.00</div>
+    <span class="sticky-total-arrow">↓</span>
+  </div>
+</div>
 
 <main>
 
@@ -533,17 +581,22 @@ function updateSummary() {
   const container = document.getElementById('summary-items');
   const totalEl = document.getElementById('summary-total');
   const btn = document.getElementById('submit-btn');
+  const stickyBar = document.getElementById('sticky-total-bar');
+  const stickyCount = document.getElementById('sticky-total-count');
+  const stickyAmount = document.getElementById('sticky-total-amount');
 
   if (!items.length) {
     container.innerHTML = '<div class="summary-empty">No items yet</div>';
     totalEl.textContent = '$0.00';
     btn.disabled = true;
+    stickyBar.classList.remove('visible');
     return;
   }
 
   let total = 0;
+  let itemCount = 0;
   const rows = items.map(i => {
-    const t = i.price * i.qty; total += t;
+    const t = i.price * i.qty; total += t; itemCount += i.qty;
     return `<div class="summary-row"><span>${i.name} ×${i.qty}</span><span>$${(t/100).toFixed(2)}</span></div>`;
   });
 
@@ -555,6 +608,16 @@ function updateSummary() {
   container.innerHTML = rows.join('');
   totalEl.textContent = `$${(total/100).toFixed(2)}`;
   btn.disabled = false;
+
+  // Keep the sticky total bar in sync so the running total is always visible
+  stickyCount.textContent = itemCount;
+  stickyAmount.textContent = `$${(total/100).toFixed(2)}`;
+  stickyBar.classList.add('visible');
+}
+
+function scrollToSummary() {
+  const el = document.getElementById('summary-section');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── PAYMENT ────────────────────────────────────
