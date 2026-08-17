@@ -1435,6 +1435,27 @@
       return res.json();
     }
 
+    // ─── ITEMS FORMAT HELPER ───────────────────────────────
+    // Orders may store items in two shapes:
+    //  - legacy:  { menuItemId: {name, price, qty} }
+    //  - current: { menuItemId: [{name, price, label, milk, addons}, ...] }
+    // This normalizes either into a flat array of {menuItemId, name, price, qty}
+    // so every downstream calculation (Reports, Costs, Prep View) works unchanged.
+    function flattenOrderItems(items) {
+      if (!items) return [];
+      const flat = [];
+      Object.entries(items).forEach(([menuItemId, val]) => {
+        if (Array.isArray(val)) {
+          // New format — each array entry is one drink with qty implicitly 1
+          val.forEach(drink => flat.push({ menuItemId, name: drink.name, price: drink.price, qty: 1, milk: drink.milk, addons: drink.addons, label: drink.label }));
+        } else if (val && typeof val === 'object') {
+          // Legacy format — single object with a qty field
+          flat.push({ menuItemId, name: val.name, price: val.price, qty: val.qty || 1 });
+        }
+      });
+      return flat;
+    }
+
     async function supaUpdate(table, id, data) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
         method: 'PATCH',
@@ -1507,7 +1528,10 @@
       document.getElementById('orders-empty').style.display = 'none';
 
       const ordersHTML = filtered.map(o => {
-        const items = o.items ? Object.values(o.items).map(i => `${i.name} ×${i.qty}`).join(', ') : '—';
+        const flatItems = flattenOrderItems(o.items);
+        const items = flatItems.length
+          ? flatItems.map(i => `${i.label ? i.label+': ' : ''}${i.name}${i.qty > 1 ? ' ×'+i.qty : ''}`).join(', ')
+          : '—';
         const addons = o.addons && o.addons.length ? `+ ${o.addons.join(', ')}` : '';
         const date   = o.created_at ? new Date(o.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
         const total  = o.total_cents ? `$${(o.total_cents/100).toFixed(2)}` : '—';
@@ -1704,8 +1728,7 @@
           const orders = await supaFetch('orders?select=items');
           const orderCounts = {};
           orders.forEach(o => {
-            if (!o.items) return;
-            Object.values(o.items).forEach(item => {
+            flattenOrderItems(o.items).forEach(item => {
               orderCounts[item.name] = (orderCounts[item.name] || 0) + item.qty;
             });
           });
@@ -2391,11 +2414,9 @@
         if (!byEvent[key]) byEvent[key] = { orders: 0, itemsSold: 0, revenue: 0 };
         byEvent[key].orders += 1;
         byEvent[key].revenue += (o.total_cents || 0);
-        if (o.items) {
-          Object.values(o.items).forEach(item => {
-            byEvent[key].itemsSold += item.qty || 0;
-          });
-        }
+        flattenOrderItems(o.items).forEach(item => {
+          byEvent[key].itemsSold += item.qty || 0;
+        });
       });
 
       document.getElementById('report-event-count').textContent = Object.keys(byEvent).length;
@@ -2421,8 +2442,7 @@
       // Top selling items across filtered orders
       const itemStats = {};
       orders.forEach(o => {
-        if (!o.items) return;
-        Object.values(o.items).forEach(item => {
+        flattenOrderItems(o.items).forEach(item => {
           const key = item.name || 'Unknown Item';
           if (!itemStats[key]) itemStats[key] = { qty: 0, revenue: 0 };
           itemStats[key].qty += item.qty || 0;
@@ -2775,13 +2795,13 @@
         });
 
         // Tally drinks sold (by menu item id) and revenue
-        const drinkStats = {}; // itemId -> { name, qty, revenue }
+        const drinkStats = {}; // menuItemId -> { name, qty, revenue }
         let totalRevenue = 0;
 
         orders.forEach(o => {
           totalRevenue += (o.total_cents || 0);
-          if (!o.items) return;
-          Object.entries(o.items).forEach(([itemId, item]) => {
+          flattenOrderItems(o.items).forEach(item => {
+            const itemId = item.menuItemId;
             if (!drinkStats[itemId]) drinkStats[itemId] = { name: item.name, qty: 0, revenue: 0 };
             drinkStats[itemId].qty += item.qty || 0;
             drinkStats[itemId].revenue += (item.price || 0) * (item.qty || 0);
