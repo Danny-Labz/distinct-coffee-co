@@ -48,9 +48,25 @@ exports.handler = async (event) => {
 
     // ── ORDER EMAILS ──────────────────────────────────────
     if (type === 'order') {
-      const items    = data.items
-        ? Object.values(data.items).map(i => `${i.name} ×${i.qty} — $${(i.price * i.qty / 100).toFixed(2)}`).join('<br>')
-        : '—';
+      // items format: { menuItemId: [{name, price, label, milk, addons}, ...] } (current)
+      //           or: { menuItemId: {name, price, qty} } (legacy)
+      // Flatten to one line per individual drink, showing its own name/milk/add-ons.
+      let items = '—';
+      if (data.items) {
+        const lines = [];
+        Object.values(data.items).forEach(val => {
+          if (Array.isArray(val)) {
+            val.forEach(drink => {
+              const extras = [drink.milk, ...(drink.addons || [])].filter(Boolean).join(', ');
+              const labelPart = drink.label ? `${drink.label}: ` : '';
+              lines.push(`${labelPart}${drink.name}${extras ? ` (${extras})` : ''} — $${(drink.price/100).toFixed(2)}`);
+            });
+          } else if (val && typeof val === 'object') {
+            lines.push(`${val.name} ×${val.qty} — $${(val.price * val.qty / 100).toFixed(2)}`);
+          }
+        });
+        if (lines.length) items = lines.join('<br>');
+      }
       const addons   = data.addons && data.addons.length ? data.addons.join(', ') : 'None';
       const total    = data.total_cents ? `$${(data.total_cents / 100).toFixed(2)}` : '—';
       const payLabel = data.payment_method === 'pay_at_event' ? 'Pay at Event (cash or card)' : 'Paid Online';
@@ -68,8 +84,6 @@ exports.handler = async (event) => {
               ${row('Phone', data.phone)}
               ${row('Event', `${data.event_name} · ${data.event_date}`)}
               ${row('Pickup', data.pickup_time)}
-              ${row('Milk / Temp', `${data.milk_pref} · ${data.temp_pref}`)}
-              ${row('Add-ons', addons)}
               ${row('Payment', payLabel)}
               ${row('Notes', data.notes)}
               <tr>
@@ -105,8 +119,6 @@ exports.handler = async (event) => {
             <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
               ${row('Event', `${data.event_name} · ${data.event_date}`)}
               ${row('Pickup Time', data.pickup_time)}
-              ${row('Milk / Temp', `${data.milk_pref} · ${data.temp_pref}`)}
-              ${addons !== 'None' ? row('Add-ons', addons) : ''}
               ${row('Payment', payLabel)}
             </table>
 
