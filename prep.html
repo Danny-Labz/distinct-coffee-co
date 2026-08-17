@@ -605,7 +605,7 @@
 
     // Build the actual recipe for THIS order's item, accounting for
     // milk substitution and add-ons the customer selected.
-    function buildAdjustedRecipe(itemId, qty, order) {
+    function buildAdjustedRecipe(itemId, drinkMilk, drinkAddons) {
       const baseRecipe = (allRecipeItems && allRecipeItems[itemId]) || [];
       if (!baseRecipe.length) return null; // no recipe defined for this item
 
@@ -622,18 +622,22 @@
       }).filter(Boolean);
 
       // Milk substitution — swap any ingredient whose name contains "Milk"
-      if (order.milk_pref) {
-        if (order.milk_pref === 'No Milk') {
+      // for whatever this specific drink's customer chose
+      if (drinkMilk) {
+        if (drinkMilk === 'No Milk') {
           lines = lines.filter(l => !l.name.includes('Milk'));
-        } else if (milkPrefMap[order.milk_pref]) {
-          const targetMilk = milkPrefMap[order.milk_pref];
+        } else if (milkPrefMap[drinkMilk]) {
+          const targetMilk = milkPrefMap[drinkMilk];
           lines = lines.map(l => l.name.includes('Milk') ? { ...l, name: targetMilk } : l);
+        } else {
+          // Milk name matches an ingredient directly (e.g. custom milk options from admin)
+          lines = lines.map(l => l.name.includes('Milk') ? { ...l, name: drinkMilk } : l);
         }
       }
 
-      // Add-ons — append extra lines for what the customer actually chose
-      if (order.addons && order.addons.length) {
-        order.addons.forEach(addon => {
+      // Add-ons — append extra lines for what this specific drink's customer chose
+      if (drinkAddons && drinkAddons.length) {
+        drinkAddons.forEach(addon => {
           if (addon === 'Extra Shot') {
             lines.push({ name: 'Espresso Shot', unit: 'shot', qty: 1, isAddon: true });
           } else if (addon.includes('Syrup')) {
@@ -642,8 +646,9 @@
         });
       }
 
-      // Scale by quantity ordered
-      return lines.map(l => ({ ...l, totalQty: l.qty * qty }));
+      // Each line represents one cup — no further scaling needed since every
+      // individual drink instance is now its own entry with its own recipe.
+      return lines.map(l => ({ ...l, totalQty: l.qty }));
     }
 
     function renderOrder(order) {
@@ -659,12 +664,27 @@
         return;
       }
 
-      const items = order.items ? Object.entries(order.items) : [];
+      // Build a flat list of individual drinks, supporting both order.items formats:
+      //  - legacy:  { menuItemId: {name, price, qty} }
+      //  - current: { menuItemId: [{name, price, label, milk, addons}, ...] }
+      const flatDrinks = [];
+      if (order.items) {
+        Object.entries(order.items).forEach(([itemId, val]) => {
+          if (Array.isArray(val)) {
+            val.forEach(d => flatDrinks.push({ itemId, name: d.name, label: d.label, milk: d.milk, addons: d.addons || [] }));
+          } else if (val && typeof val === 'object') {
+            const qty = val.qty || 1;
+            for (let n = 0; n < qty; n++) {
+              flatDrinks.push({ itemId, name: val.name, label: null, milk: null, addons: [] });
+            }
+          }
+        });
+      }
 
-      const itemLines = items.map(([itemId, i]) => {
+      const itemLines = flatDrinks.map(d => {
         let recipeHtml = '';
         if (showRecipes) {
-          const recipe = buildAdjustedRecipe(itemId, i.qty, order);
+          const recipe = buildAdjustedRecipe(d.itemId, d.milk, d.addons);
           if (recipe && recipe.length) {
             recipeHtml = `
               <div class="recipe-block">
@@ -680,11 +700,13 @@
           }
         }
 
+        const configLine = [d.milk, ...(d.addons || [])].filter(Boolean).join(' · ');
+
         return `
           <div class="item-line-wrap">
             <div class="item-line">
-              <span class="item-qty">${i.qty}×</span>
-              <span class="item-name">${i.name}</span>
+              <span class="item-qty">${d.label ? `${d.label}` : '1×'}</span>
+              <span class="item-name">${d.name}${configLine ? `<div style="font-size:12px;font-weight:400;color:rgba(248,246,242,0.5);margin-top:2px;">${configLine}</div>` : ''}</span>
             </div>
             ${recipeHtml}
           </div>`;
