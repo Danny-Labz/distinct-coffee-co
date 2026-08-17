@@ -62,25 +62,16 @@
     }
     .sticky-total-bar.visible { display: flex; }
     .sticky-total-bar:active { transform: scale(0.98); }
-    .sticky-total-left {
-      display: flex; align-items: center; gap: 10px;
-    }
+    .sticky-total-left { display: flex; align-items: center; gap: 10px; }
     .sticky-total-count {
       background: rgba(248,246,242,0.15);
-      width: 26px; height: 26px;
-      border-radius: 50%;
+      width: 26px; height: 26px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 13px; font-weight: 700;
     }
-    .sticky-total-label {
-      font-size: 12px; font-weight: 500; letter-spacing: 0.3px;
-    }
-    .sticky-total-amount {
-      font-size: 17px; font-weight: 700;
-    }
-    .sticky-total-arrow {
-      font-size: 12px; opacity: 0.5; margin-left: 8px;
-    }
+    .sticky-total-label { font-size: 12px; font-weight: 500; letter-spacing: 0.3px; }
+    .sticky-total-amount { font-size: 17px; font-weight: 700; }
+    .sticky-total-arrow { font-size: 12px; opacity: 0.5; margin-left: 8px; }
 
     /* MAIN */
     main { max-width: 640px; margin: 0 auto; padding: 148px 24px 100px; }
@@ -106,36 +97,67 @@
     .item-desc { font-size: 12px; color: var(--mid); margin-top: 3px; }
     .item-price { font-size: 15px; font-weight: 600; min-width: 54px; text-align: right; }
 
-    /* QTY */
-    .qty-control {
-      display: flex; align-items: center;
-      border: 1.5px solid var(--border); border-radius: 4px; overflow: hidden;
-      flex-shrink: 0;
+    /* ADD BUTTON — replaces the old qty stepper; each tap adds ONE configurable drink */
+    .add-drink-btn {
+      width: 44px; height: 44px; background: var(--black); color: var(--white);
+      border: none; border-radius: 4px; font-size: 22px; font-weight: 400;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background 0.15s;
     }
-    .qty-btn {
-      width: 44px; height: 44px; background: none; border: none;
-      font-size: 22px; font-weight: 400; cursor: pointer; color: var(--black);
-      transition: background 0.15s; display: flex; align-items: center; justify-content: center;
-    }
-    .qty-btn:active { background: var(--black); color: var(--white); }
-    .qty-display {
-      width: 40px; text-align: center; font-size: 17px; font-weight: 700;
-      border-left: 1.5px solid var(--border); border-right: 1.5px solid var(--border);
-      line-height: 44px;
+    .add-drink-btn:active { background: #333; }
+    .item-drink-count {
+      font-size: 11px; font-weight: 700; color: var(--black);
+      background: var(--off-white); border-radius: 20px; padding: 4px 10px;
+      margin-right: 8px; white-space: nowrap;
     }
 
-    /* CHIPS */
-    .chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 26px; }
-    .chip {
-      font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
-      text-transform: uppercase; padding: 12px 18px;
-      border: 1.5px solid var(--border); border-radius: 4px;
-      cursor: pointer; background: none; color: var(--black);
-      font-family: 'Montserrat', sans-serif;
-      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    /* ── YOUR DRINKS (configured cart) ── */
+    #your-drinks-section { display: none; }
+    .drink-card {
+      background: var(--off-white);
+      border-radius: 6px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
     }
-    .chip.active { background: var(--black); color: var(--white); border-color: var(--black); }
-    .chip:hover:not(.active) { background: var(--off-white); }
+    .drink-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; gap: 10px;
+    }
+    .drink-name-input {
+      font-size: 16px; font-weight: 600; color: var(--black);
+      background: none; border: none; border-bottom: 1.5px dashed var(--mid);
+      padding: 4px 2px; outline: none; flex: 1; min-width: 0;
+      font-family: 'Montserrat', sans-serif;
+    }
+    .drink-name-input:focus { border-bottom-color: var(--black); }
+    .drink-card-price { font-size: 15px; font-weight: 700; white-space: nowrap; }
+    .drink-remove-btn {
+      background: none; border: none; color: var(--mid); font-size: 18px;
+      cursor: pointer; padding: 2px 6px; line-height: 1; flex-shrink: 0;
+    }
+    .drink-remove-btn:active { color: #c00; }
+    .drink-item-label {
+      font-size: 12px; color: #777; margin-bottom: 14px; letter-spacing: 0.2px;
+    }
+
+    .drink-config-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--mid); margin-bottom: 8px; margin-top: 14px;
+    }
+    .drink-config-label:first-of-type { margin-top: 0; }
+    .drink-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .drink-chip {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+      padding: 9px 14px; border-radius: 20px;
+      border: 1.5px solid var(--border); background: var(--white);
+      cursor: pointer; color: var(--black);
+      font-family: 'Montserrat', sans-serif;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .drink-chip.active { background: var(--black); color: var(--white); border-color: var(--black); }
+
+    /* CHIPS (legacy — still used for milk/addon loading state text) */
+    .chips { display: flex; gap: 10px; flex-wrap: wrap; }
 
     /* FORM */
     .form-group { margin-bottom: 16px; }
@@ -211,7 +233,7 @@
 
     @media (max-width: 500px) {
       nav { padding: 16px 20px; }
-      main { padding: 88px 16px 60px; }
+      main { padding: 148px 16px 80px; }
       .form-row { grid-template-columns: 1fr; }
       .payment-options { grid-template-columns: 1fr; }
     }
@@ -227,7 +249,7 @@
 <div class="sticky-total-bar" id="sticky-total-bar" onclick="scrollToSummary()">
   <div class="sticky-total-left">
     <div class="sticky-total-count" id="sticky-total-count">0</div>
-    <div class="sticky-total-label">items · tap to review</div>
+    <div class="sticky-total-label">drinks · tap to review</div>
   </div>
   <div class="sticky-total-left">
     <div class="sticky-total-amount" id="sticky-total-amount">$0.00</div>
@@ -242,13 +264,10 @@
     <div class="menu-loading">Loading menu...</div>
   </div>
 
-  <!-- CUSTOMIZATIONS -->
-  <div id="customizations" style="display:none;">
-    <div class="section-label" style="margin-top:8px;">Milk Preference</div>
-    <div class="chips" id="milk-chips"></div>
-
-    <div class="section-label">Add-ons</div>
-    <div class="chips" id="addon-chips"></div>
+  <!-- YOUR DRINKS — each configured individually -->
+  <div id="your-drinks-section">
+    <div class="section-label" style="margin-top:8px;">Your Drinks</div>
+    <div id="your-drinks-list"></div>
   </div>
 
   <!-- EVENT / DATE -->
@@ -357,11 +376,15 @@
 const SUPABASE_URL = 'https://qjsitqvfimwiuoojsoge.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqc2l0cXZmaW13aXVvb2pzb2dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5MzAwNzUsImV4cCI6MjA5ODUwNjA3NX0.p2qXO5-Z6uWd7n7slhHJT_s2NDvjRlsOMQLqCRxFIcU';
 
-let ADDON_PRICES = {}; // populated dynamically from Supabase addons table
+// ── STATE ────────────────────────────────────
+// drinks: flat array of individually-configured drink instances.
+// Each: { uid, menuItemId, name, price, category, label, milk, addons: [] }
+let drinks = [];
+let drinkUidCounter = 0;
 
-let cart = {};
-let addons = [];
-let milk = '';
+let milkOptions = [];   // [{name, price_cents}]
+let addonOptions = [];  // [{name, price_cents}]
+
 let paymentMethod = 'pay_now';
 let activeEvent = null;
 
@@ -400,16 +423,13 @@ async function loadMenu() {
               <div class="item-desc">${item.description || ''}</div>
             </div>
             <div class="item-price">$${(item.price_cents/100).toFixed(2)}</div>
-            <div class="qty-control">
-              <button class="qty-btn" onclick="changeQty(this,-1)">−</button>
-              <div class="qty-display">0</div>
-              <button class="qty-btn" onclick="changeQty(this,1)">+</button>
-            </div>
+            <span class="item-drink-count" id="count-${item.id}" style="display:none;">0</span>
+            <button class="add-drink-btn" onclick="addDrink('${item.id}')">+</button>
           </div>`).join('')}
       </div>`).join('');
 
     // Show rest of form
-    ['customizations','event-section','customer-section','summary-section','payment-section']
+    ['event-section','customer-section','summary-section','payment-section']
       .forEach(id => document.getElementById(id).style.display = 'block');
 
   } catch(e) {
@@ -421,38 +441,146 @@ async function loadMenu() {
 async function loadAddons() {
   try {
     const items = await sbFetch('addons?is_available=eq.true&order=type.asc,sort_order.asc');
-    const milks  = items.filter(a => a.type === 'milk');
-    const syrups = items.filter(a => a.type === 'syrup');
-
-    // Render milk chips
-    const milkContainer = document.getElementById('milk-chips');
-    if (milks.length) {
-      milkContainer.innerHTML = milks.map((m, i) => `
-        <button class="chip ${i === 0 ? 'active' : ''}" onclick="selectChip(this,'milk')">${m.name}</button>
-      `).join('');
-      milk = milks[0].name; // default to first milk option
-    } else {
-      milkContainer.innerHTML = '<span style="font-size:10px;color:#999;">No milk options available</span>';
-    }
-
-    // Render add-on chips + populate pricing map
-    const addonContainer = document.getElementById('addon-chips');
-    ADDON_PRICES = {};
-    if (syrups.length) {
-      addonContainer.innerHTML = syrups.map(s => {
-        ADDON_PRICES[s.name] = s.price_cents;
-        const priceLabel = s.price_cents ? ` +$${(s.price_cents/100).toFixed(2)}` : '';
-        return `<button class="chip" onclick="toggleAddon(this)" data-price="${s.price_cents}">${s.name}${priceLabel}</button>`;
-      }).join('');
-    } else {
-      addonContainer.innerHTML = '<span style="font-size:10px;color:#999;">No add-ons available</span>';
-    }
-
+    milkOptions  = items.filter(a => a.type === 'milk');
+    addonOptions = items.filter(a => a.type === 'syrup');
   } catch(e) {
     console.warn('Could not load addons:', e);
-    document.getElementById('milk-chips').innerHTML  = '<span style="font-size:10px;color:#999;">Unavailable</span>';
-    document.getElementById('addon-chips').innerHTML = '<span style="font-size:10px;color:#999;">Unavailable</span>';
+    milkOptions = [];
+    addonOptions = [];
   }
+}
+
+// ── ADD A DRINK (one configurable instance per tap) ──
+function addDrink(menuItemId) {
+  const row = document.querySelector(`.menu-item[data-id="${menuItemId}"]`);
+  if (!row) return;
+
+  const name     = row.dataset.name;
+  const price    = parseInt(row.dataset.price);
+  const category = row.dataset.category || '';
+
+  drinkUidCounter += 1;
+  const drink = {
+    uid: drinkUidCounter,
+    menuItemId,
+    name,
+    price,
+    category,
+    label: '', // filled in after we know this item's running count
+    milk: milkOptions.length ? milkOptions[0].name : '',
+    addons: [],
+  };
+  drinks.push(drink);
+
+  // Label defaults to "Drink N" scoped to overall order, not per-item —
+  // simplest mental model for the customer ("Drink 1", "Drink 2"...)
+  drink.label = `Drink ${drinks.length}`;
+
+  updateItemCountBadge(menuItemId);
+  renderYourDrinks();
+  updateSummary();
+
+  // Scroll the new drink card into view so it's obvious what just happened
+  requestAnimationFrame(() => {
+    const card = document.getElementById(`drink-card-${drink.uid}`);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+function removeDrink(uid) {
+  const drink = drinks.find(d => d.uid === uid);
+  if (!drink) return;
+  drinks = drinks.filter(d => d.uid !== uid);
+
+  // Renumber remaining default labels ("Drink 1", "Drink 2"...) but leave
+  // any custom name the customer typed untouched.
+  let n = 0;
+  drinks.forEach(d => {
+    n += 1;
+    if (/^Drink \d+$/.test(d.label)) d.label = `Drink ${n}`;
+  });
+
+  updateItemCountBadge(drink.menuItemId);
+  renderYourDrinks();
+  updateSummary();
+}
+
+function updateItemCountBadge(menuItemId) {
+  const count = drinks.filter(d => d.menuItemId === menuItemId).length;
+  const badge = document.getElementById(`count-${menuItemId}`);
+  if (!badge) return;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline-block' : 'none';
+}
+
+// ── RENDER "YOUR DRINKS" — one card per configurable drink ──
+function renderYourDrinks() {
+  const section = document.getElementById('your-drinks-section');
+  const list = document.getElementById('your-drinks-list');
+
+  if (!drinks.length) {
+    section.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+  section.style.display = 'block';
+
+  list.innerHTML = drinks.map(d => {
+    const milkChips = milkOptions.length ? `
+      <div class="drink-config-label">Milk</div>
+      <div class="drink-chips">
+        ${milkOptions.map(m => `
+          <button type="button" class="drink-chip ${d.milk === m.name ? 'active' : ''}" onclick="setDrinkMilk(${d.uid}, '${m.name.replace(/'/g,"\\'")}')">${m.name}</button>
+        `).join('')}
+      </div>` : '';
+
+    const addonChips = addonOptions.length ? `
+      <div class="drink-config-label">Add-ons</div>
+      <div class="drink-chips">
+        ${addonOptions.map(a => {
+          const active = d.addons.includes(a.name);
+          const priceLabel = a.price_cents ? ` +$${(a.price_cents/100).toFixed(2)}` : '';
+          return `<button type="button" class="drink-chip ${active ? 'active' : ''}" onclick="toggleDrinkAddon(${d.uid}, '${a.name.replace(/'/g,"\\'")}')">${a.name}${priceLabel}</button>`;
+        }).join('')}
+      </div>` : '';
+
+    return `
+      <div class="drink-card" id="drink-card-${d.uid}">
+        <div class="drink-card-header">
+          <input type="text" class="drink-name-input" value="${d.label.replace(/"/g,'&quot;')}"
+                 oninput="renameDrink(${d.uid}, this.value)" placeholder="Drink ${drinks.indexOf(d)+1}" />
+          <span class="drink-card-price">$${(d.price/100).toFixed(2)}</span>
+          <button class="drink-remove-btn" onclick="removeDrink(${d.uid})" aria-label="Remove drink">×</button>
+        </div>
+        <div class="drink-item-label">${d.name}</div>
+        ${milkChips}
+        ${addonChips}
+      </div>`;
+  }).join('');
+}
+
+function renameDrink(uid, value) {
+  const d = drinks.find(x => x.uid === uid);
+  if (d) d.label = value.trim() || `Drink ${drinks.indexOf(d)+1}`;
+}
+
+function setDrinkMilk(uid, milkName) {
+  const d = drinks.find(x => x.uid === uid);
+  if (!d) return;
+  d.milk = milkName;
+  renderYourDrinks();
+}
+
+function toggleDrinkAddon(uid, addonName) {
+  const d = drinks.find(x => x.uid === uid);
+  if (!d) return;
+  if (d.addons.includes(addonName)) {
+    d.addons = d.addons.filter(a => a !== addonName);
+  } else {
+    d.addons.push(addonName);
+  }
+  renderYourDrinks();
+  updateSummary();
 }
 
 // ── LOAD EVENT ─────────────────────────────────
@@ -469,12 +597,10 @@ async function loadEvent() {
 
     activeEvent = events[0];
 
-    // Check cutoff
     if (activeEvent.order_cutoff && new Date() > new Date(activeEvent.order_cutoff)) {
       showCustomTime(); return;
     }
 
-    // Show event banner
     document.getElementById('ev-name').textContent = activeEvent.name;
     document.getElementById('ev-meta').textContent = [activeEvent.date, activeEvent.location, activeEvent.pickup_hours].filter(Boolean).join(' · ');
     if (activeEvent.order_cutoff) {
@@ -484,7 +610,6 @@ async function loadEvent() {
     document.getElementById('event-banner').style.display = 'block';
     document.getElementById('pickup-slots').style.display = 'block';
 
-    // Check pickup slot capacity so we don't overbook any single window
     await applySlotCapacity(activeEvent);
 
   } catch(e) {
@@ -495,16 +620,15 @@ async function loadEvent() {
 // ── SLOT CAPACITY ───────────────────────────────
 async function applySlotCapacity(event) {
   const cap = event.max_items_per_slot;
-  if (!cap || cap <= 0) return; // no cap set — skip entirely
+  if (!cap || cap <= 0) return;
 
   try {
-    // Pull all non-cancelled orders for this event to tally items already booked per slot
     const orders = await sbFetch(`orders?event_id=eq.${event.id}&status=neq.cancelled&select=pickup_time,items`);
 
     const slotCounts = {};
     orders.forEach(o => {
       if (!o.pickup_time || !o.items) return;
-      const itemCount = Object.values(o.items).reduce((sum, i) => sum + (i.qty || 0), 0);
+      const itemCount = countItemsInOrder(o.items);
       slotCounts[o.pickup_time] = (slotCounts[o.pickup_time] || 0) + itemCount;
     });
 
@@ -514,7 +638,7 @@ async function applySlotCapacity(event) {
 
     Array.from(select.options).forEach(opt => {
       const slot = opt.dataset.slot;
-      if (!slot) return; // skip the placeholder option
+      if (!slot) return;
 
       const booked = slotCounts[slot] || 0;
       const remaining = cap - booked;
@@ -536,48 +660,24 @@ async function applySlotCapacity(event) {
 
   } catch (e) {
     console.warn('Could not check slot capacity:', e);
-    // Fail open — if this check fails, don't block ordering entirely
   }
+}
+
+// Counts total drinks in an order.items structure, supporting both the
+// legacy {menuItemId: {qty}} format and the new {menuItemId: [drink, ...]} format
+function countItemsInOrder(items) {
+  return Object.values(items).reduce((sum, val) => {
+    if (Array.isArray(val)) return sum + val.length;
+    return sum + (val.qty || 0);
+  }, 0);
 }
 
 function showCustomTime() {
   document.getElementById('custom-time').style.display = 'block';
 }
 
-// ── QTY ────────────────────────────────────────
-function changeQty(btn, delta) {
-  const row = btn.closest('.menu-item');
-  const disp = row.querySelector('.qty-display');
-  const id = row.dataset.id;
-  const name = row.dataset.name;
-  const price = parseInt(row.dataset.price);
-  const category = row.dataset.category || '';
-  let qty = Math.max(0, parseInt(disp.textContent) + delta);
-  disp.textContent = qty;
-  if (qty === 0) delete cart[id];
-  else cart[id] = { name, price, qty, category };
-  updateSummary();
-}
-
-// ── CHIPS ──────────────────────────────────────
-function selectChip(btn, group) {
-  btn.closest('.chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-  btn.classList.add('active');
-  if (group === 'milk') milk = btn.textContent.trim();
-}
-
-function toggleAddon(btn) {
-  btn.classList.toggle('active');
-  const label = btn.textContent.split(' +')[0].trim();
-  addons = btn.classList.contains('active')
-    ? [...new Set([...addons, label])]
-    : addons.filter(a => a !== label);
-  updateSummary();
-}
-
 // ── SUMMARY ────────────────────────────────────
 function updateSummary() {
-  const items = Object.values(cart);
   const container = document.getElementById('summary-items');
   const totalEl = document.getElementById('summary-total');
   const btn = document.getElementById('submit-btn');
@@ -585,8 +685,8 @@ function updateSummary() {
   const stickyCount = document.getElementById('sticky-total-count');
   const stickyAmount = document.getElementById('sticky-total-amount');
 
-  if (!items.length) {
-    container.innerHTML = '<div class="summary-empty">No items yet</div>';
+  if (!drinks.length) {
+    container.innerHTML = '<div class="summary-empty">No drinks yet</div>';
     totalEl.textContent = '$0.00';
     btn.disabled = true;
     stickyBar.classList.remove('visible');
@@ -594,23 +694,28 @@ function updateSummary() {
   }
 
   let total = 0;
-  let itemCount = 0;
-  const rows = items.map(i => {
-    const t = i.price * i.qty; total += t; itemCount += i.qty;
-    return `<div class="summary-row"><span>${i.name} ×${i.qty}</span><span>$${(t/100).toFixed(2)}</span></div>`;
-  });
+  const rows = drinks.map(d => {
+    let lineTotal = d.price;
+    let addonsCost = 0;
+    d.addons.forEach(addonName => {
+      const opt = addonOptions.find(a => a.name === addonName);
+      if (opt) addonsCost += opt.price_cents;
+    });
+    lineTotal += addonsCost;
+    total += lineTotal;
 
-  addons.forEach(a => {
-    const p = ADDON_PRICES[a] || 0;
-    if (p) { total += p; rows.push(`<div class="summary-row"><span>${a}</span><span>$${(p/100).toFixed(2)}</span></div>`); }
+    const extras = [d.milk, ...d.addons].filter(Boolean).join(', ');
+    return `<div class="summary-row">
+      <span>${d.label} — ${d.name}${extras ? ` <span style="color:#999;">(${extras})</span>` : ''}</span>
+      <span>$${(lineTotal/100).toFixed(2)}</span>
+    </div>`;
   });
 
   container.innerHTML = rows.join('');
   totalEl.textContent = `$${(total/100).toFixed(2)}`;
   btn.disabled = false;
 
-  // Keep the sticky total bar in sync so the running total is always visible
-  stickyCount.textContent = itemCount;
+  stickyCount.textContent = drinks.length;
   stickyAmount.textContent = `$${(total/100).toFixed(2)}`;
   stickyBar.classList.add('visible');
 }
@@ -639,7 +744,7 @@ function selectPayment(btn, method) {
 // ── VALIDATE ───────────────────────────────────
 function validate() {
   const errors = [];
-  if (!Object.keys(cart).length) errors.push('Please add at least one item.');
+  if (!drinks.length) errors.push('Please add at least one drink.');
   if (!document.getElementById('first-name').value.trim()) errors.push('First name required.');
   if (!document.getElementById('email').value.trim()) errors.push('Email required.');
 
@@ -647,6 +752,36 @@ function validate() {
   if (hasEvent && !document.getElementById('pickup-time').value) errors.push('Please select a pickup time.');
   if (!hasEvent && !document.getElementById('custom-datetime').value) errors.push('Please select a date and time.');
   return errors;
+}
+
+// ── BUILD items PAYLOAD ────────────────────────
+// Groups the flat `drinks` array back into { menuItemId: [drink, drink...] }
+// so Reports / Costs / Prep View can key off menu_item_id exactly like before,
+// while still preserving each individual drink's own name/milk/addons.
+function buildItemsPayload() {
+  const grouped = {};
+  drinks.forEach(d => {
+    if (!grouped[d.menuItemId]) grouped[d.menuItemId] = [];
+    grouped[d.menuItemId].push({
+      name: d.name,
+      price: d.price,
+      label: d.label,
+      milk: d.milk,
+      addons: d.addons,
+    });
+  });
+  return grouped;
+}
+
+function calcTotalCents() {
+  return drinks.reduce((sum, d) => {
+    let line = d.price;
+    d.addons.forEach(addonName => {
+      const opt = addonOptions.find(a => a.name === addonName);
+      if (opt) line += opt.price_cents;
+    });
+    return sum + line;
+  }, 0);
 }
 
 // ── SUBMIT ─────────────────────────────────────
@@ -671,39 +806,42 @@ async function submitOrder() {
     ? document.getElementById('pickup-time').value
     : document.getElementById('custom-datetime').value;
 
-  // Final capacity re-check right before booking — closes the race window where
-  // someone else could have filled this slot while the customer was filling out the form.
   if (hasEvent && activeEvent.max_items_per_slot) {
-    const cartItemCount = Object.values(cart).reduce((s,i) => s + i.qty, 0);
+    const cartItemCount = drinks.length;
     try {
       const orders = await sbFetch(`orders?event_id=eq.${activeEvent.id}&status=neq.cancelled&pickup_time=eq.${encodeURIComponent(pickupTime)}&select=items`);
       const alreadyBooked = orders.reduce((sum, o) => {
         if (!o.items) return sum;
-        return sum + Object.values(o.items).reduce((s,i) => s + (i.qty||0), 0);
+        return sum + countItemsInOrder(o.items);
       }, 0);
 
       if (alreadyBooked + cartItemCount > activeEvent.max_items_per_slot) {
         errorEl.textContent = `That pickup window just filled up. Please choose a different time.`;
         errorEl.style.display = 'block';
         errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        await applySlotCapacity(activeEvent); // refresh the dropdown to reflect reality
+        await applySlotCapacity(activeEvent);
+        btn.disabled = false;
+        btn.textContent = paymentMethod === 'pay_at_event' ? 'Reserve My Order →' : 'Proceed to Payment →';
         return;
       }
     } catch(e) {
       console.warn('Slot re-check failed, proceeding anyway:', e);
-      // Fail open rather than blocking a legitimate order over a network hiccup
     }
   }
 
   const location = hasEvent ? (activeEvent.location || '') : (document.getElementById('custom-location').value.trim());
-  const totalCents = Object.values(cart).reduce((s,i) => s + i.price*i.qty, 0)
-    + addons.reduce((s,a) => s + (ADDON_PRICES[a]||0), 0);
+  const totalCents = calcTotalCents();
   const pin = String((parseInt(crypto.randomUUID().replace(/-/g,'').slice(0,8), 16) % 9000) + 1000);
 
-  // Auto-derive temp summary from what's actually in the cart
-  const hasHot  = Object.values(cart).some(i => (i.category || '').toLowerCase().includes('espresso'));
-  const hasCold = Object.values(cart).some(i => (i.category || '').toLowerCase().includes('cold'));
+  // Overall milk/temp summary lines (kept for backward-compat display in admin/emails)
+  const uniqueMilks = [...new Set(drinks.map(d => d.milk).filter(Boolean))];
+  const milkSummary = uniqueMilks.length > 1 ? 'Mixed' : (uniqueMilks[0] || '—');
+
+  const hasHot  = drinks.some(d => (d.category || '').toLowerCase().includes('espresso'));
+  const hasCold = drinks.some(d => (d.category || '').toLowerCase().includes('cold'));
   const tempSummary = hasHot && hasCold ? 'Mixed (Hot & Iced)' : hasCold ? 'Iced' : hasHot ? 'Hot' : '—';
+
+  const allAddonsFlat = [...new Set(drinks.flatMap(d => d.addons))];
 
   const orderData = {
     event_id:       hasEvent ? activeEvent.id : '00000000-0000-0000-0000-000000000000',
@@ -713,10 +851,10 @@ async function submitOrder() {
     email:          document.getElementById('email').value.trim(),
     phone:          document.getElementById('phone').value.trim(),
     pickup_time:    pickupTime,
-    milk_pref:      milk,
+    milk_pref:      milkSummary,
     temp_pref:      tempSummary,
-    addons,
-    items:          cart,
+    addons:         allAddonsFlat,
+    items:          buildItemsPayload(),
     total_cents:    totalCents,
     status:         paymentMethod === 'pay_at_event' ? 'reserved' : 'pending',
     payment_method: paymentMethod,
@@ -725,7 +863,6 @@ async function submitOrder() {
   };
 
   try {
-    // Save to Supabase
     const r = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
       method: 'POST',
       headers: {
@@ -742,8 +879,6 @@ async function submitOrder() {
     const orderId = Array.isArray(saved) ? saved[0].id : saved.id;
 
     if (paymentMethod === 'pay_at_event') {
-      // Reserved orders are final immediately — safe to email now, and this path can't be re-triggered
-      // by a payment redirect loop since there's no external payment step.
       try {
         await fetch('/.netlify/functions/send-notification', {
           method: 'POST',
@@ -756,15 +891,11 @@ async function submitOrder() {
       return;
     }
 
-    // Pay Now — do NOT send the email here. The order is only "real" once Stripe
-    // actually confirms payment, which the stripe-webhook function handles server-side
-    // exactly once per completed checkout session. Sending it here would fire an email
-    // for every attempt, including ones where the customer backs out before paying.
     btn.textContent = 'Redirecting to payment...';
     const sr = await fetch('/.netlify/functions/create-checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_id: orderId, items: cart, addons, customer_email: orderData.email, event_name: orderData.event_name }),
+      body: JSON.stringify({ order_id: orderId, items: orderData.items, customer_email: orderData.email, event_name: orderData.event_name }),
     });
 
     if (!sr.ok) {
@@ -774,7 +905,6 @@ async function submitOrder() {
     }
     const { url, session_id } = await sr.json();
 
-    // Save the Stripe session ID to the order record
     if (session_id) {
       await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, {
         method: 'PATCH',
