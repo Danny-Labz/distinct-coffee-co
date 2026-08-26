@@ -1469,13 +1469,48 @@
       return res.ok;
     }
 
+    // ─── SECURED ORDERS / INQUIRIES ACCESS ─────────────────
+    // orders and inquiries contain customer PII and are locked down by RLS —
+    // the public anon key can no longer read or update them directly. These
+    // helpers route through Netlify functions that use the service role key
+    // server-side instead.
+    async function adminFetchOrders(queryString) {
+      const res = await fetch(`/.netlify/functions/admin-get-orders${queryString ? '?' + queryString : ''}`);
+      if (!res.ok) throw new Error(`admin-get-orders error: ${res.status}`);
+      return res.json();
+    }
+
+    async function adminUpdateOrder(orderId, updates) {
+      const res = await fetch('/.netlify/functions/admin-update-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, updates }),
+      });
+      return res.ok;
+    }
+
+    async function adminFetchInquiries(queryString) {
+      const res = await fetch(`/.netlify/functions/admin-get-inquiries${queryString ? '?' + queryString : ''}`);
+      if (!res.ok) throw new Error(`admin-get-inquiries error: ${res.status}`);
+      return res.json();
+    }
+
+    async function adminUpdateInquiry(inquiryId, updates) {
+      const res = await fetch('/.netlify/functions/admin-get-inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inquiry_id: inquiryId, updates }),
+      });
+      return res.ok;
+    }
+
     // ─── ORDERS ──────────────────────────────────────────
     async function loadOrders() {
       document.getElementById('orders-loading').style.display = 'block';
       document.getElementById('orders-table').style.display  = 'none';
       document.getElementById('orders-empty').style.display  = 'none';
       try {
-        allOrders = await supaFetch('orders?order=created_at.desc');
+        allOrders = await adminFetchOrders('order=created_at.desc');
         updateOrderStats();
         populateEventFilter();
         renderOrders();
@@ -1611,7 +1646,7 @@
     }
 
     async function updateOrderStatus(id, status) {
-      await supaUpdate('orders', id, { status });
+      await adminUpdateOrder(id, { status });
       const order = allOrders.find(o => o.id === id);
       if (order) { order.status = status; updateOrderStats(); }
     }
@@ -1622,7 +1657,7 @@
       document.getElementById('inquiries-table').style.display  = 'none';
       document.getElementById('inquiries-empty').style.display  = 'none';
       try {
-        allInquiries = await supaFetch('inquiries?order=created_at.desc');
+        allInquiries = await adminFetchInquiries('order=created_at.desc');
         document.getElementById('badge-inquiries').textContent =
           allInquiries.filter(i => i.status === 'new').length;
         renderInquiries();
@@ -1704,7 +1739,7 @@
     }
 
     async function updateInquiryStatus(id, status) {
-      await supaUpdate('inquiries', id, { status });
+      await adminUpdateInquiry(id, { status });
       const inq = allInquiries.find(i => i.id === id);
       if (inq) {
         inq.status = status;
@@ -1725,7 +1760,7 @@
 
         // Load order counts — optional, don't block if it fails
         try {
-          const orders = await supaFetch('orders?select=items');
+          const orders = await adminFetchOrders('select=items');
           const orderCounts = {};
           orders.forEach(o => {
             flattenOrderItems(o.items).forEach(item => {
@@ -2370,7 +2405,7 @@
       document.getElementById('reports-empty').style.display  = 'none';
       try {
         if (!allOrders || !allOrders.length) {
-          allOrders = await supaFetch('orders?order=created_at.desc');
+          allOrders = await adminFetchOrders('order=created_at.desc');
         }
         renderReports();
       } catch (e) {
@@ -2776,7 +2811,7 @@
       try {
         // Pull all orders for this event that represent real committed sales:
         // fulfilled (picked up) or paid (online, regardless of fulfillment yet) or reserved (will pay + pick up)
-        const orders = await supaFetch(`orders?event_id=eq.${eventId}&status=in.(paid,reserved,fulfilled)&select=*`);
+        const orders = await adminFetchOrders(`event_id=eq.${eventId}&status=in.(paid,reserved,fulfilled)&select=*`);
 
         // Fetch all recipes + ingredients once so we can look up cost per drink
         const [allRecipes, ingredients] = await Promise.all([
