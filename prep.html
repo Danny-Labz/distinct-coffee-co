@@ -442,15 +442,20 @@
       return res.json();
     }
 
-    async function supaUpdate(id, data) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify(data),
+    // orders contain customer PII and are locked down by RLS — reads/writes
+    // go through the secured admin functions (service role key, server-side
+    // only) instead of the public anon key used for events/menu/etc above.
+    async function adminFetchOrders(queryString) {
+      const res = await fetch(`/.netlify/functions/admin-get-orders${queryString ? '?' + queryString : ''}`);
+      if (!res.ok) throw new Error(`admin-get-orders error: ${res.status}`);
+      return res.json();
+    }
+
+    async function adminUpdateOrder(orderId, updates) {
+      const res = await fetch('/.netlify/functions/admin-update-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, updates }),
       });
       return res.ok;
     }
@@ -518,7 +523,7 @@
       document.getElementById('queue-indicator').textContent = '';
 
       try {
-        const orders = await supaFetch(`orders?pickup_pin=eq.${pin}&order=created_at.desc&limit=1`);
+        const orders = await adminFetchOrders(`pickup_pin=eq.${pin}&order=created_at.desc&limit=1`);
         if (!orders.length) {
           errorEl.textContent = `No order found with PIN ${pin}.`;
           errorEl.style.display = 'block';
@@ -543,12 +548,12 @@
       }
 
       try {
-        let path = `orders?status=in.(paid,reserved)&fulfilled_at=is.null&order=created_at.asc&limit=1`;
+        let path = `status=in.(paid,reserved)&fulfilled_at=is.null&order=created_at.asc&limit=1`;
         if (currentMode === 'event' && activeEventId) {
-          path = `orders?status=in.(paid,reserved)&fulfilled_at=is.null&event_id=eq.${activeEventId}&order=created_at.asc&limit=1`;
+          path = `status=in.(paid,reserved)&fulfilled_at=is.null&event_id=eq.${activeEventId}&order=created_at.asc&limit=1`;
         }
 
-        const orders = await supaFetch(path);
+        const orders = await adminFetchOrders(path);
 
         if (!orders.length) {
           indicator.textContent = currentMode === 'event' ? "No pending orders for today's event" : 'No pending orders in queue';
@@ -557,9 +562,9 @@
         }
 
         // Count how many are behind this one
-        let countPath = `orders?status=in.(paid,reserved)&fulfilled_at=is.null&select=id`;
+        let countPath = `status=in.(paid,reserved)&fulfilled_at=is.null&select=id`;
         if (currentMode === 'event' && activeEventId) countPath += `&event_id=eq.${activeEventId}`;
-        const allPending = await supaFetch(countPath);
+        const allPending = await adminFetchOrders(countPath);
 
         indicator.textContent = `Next in queue · ${allPending.length} pending`;
         renderOrder(orders[0]);
@@ -761,7 +766,7 @@
       btn.textContent = 'Updating...';
 
       try {
-        await supaUpdate(orderId, {
+        await adminUpdateOrder(orderId, {
           status: 'fulfilled',
           fulfilled_at: new Date().toISOString(),
         });

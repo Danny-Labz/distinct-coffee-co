@@ -623,14 +623,9 @@ async function applySlotCapacity(event) {
   if (!cap || cap <= 0) return;
 
   try {
-    const orders = await sbFetch(`orders?event_id=eq.${event.id}&status=neq.cancelled&select=pickup_time,items`);
-
-    const slotCounts = {};
-    orders.forEach(o => {
-      if (!o.pickup_time || !o.items) return;
-      const itemCount = countItemsInOrder(o.items);
-      slotCounts[o.pickup_time] = (slotCounts[o.pickup_time] || 0) + itemCount;
-    });
+    const capRes = await fetch(`/.netlify/functions/check-slot-capacity?event_id=${event.id}`);
+    if (!capRes.ok) throw new Error('capacity check failed');
+    const { slotCounts } = await capRes.json();
 
     const select = document.getElementById('pickup-time');
     const noteEl = document.getElementById('slot-capacity-note');
@@ -809,11 +804,9 @@ async function submitOrder() {
   if (hasEvent && activeEvent.max_items_per_slot) {
     const cartItemCount = drinks.length;
     try {
-      const orders = await sbFetch(`orders?event_id=eq.${activeEvent.id}&status=neq.cancelled&pickup_time=eq.${encodeURIComponent(pickupTime)}&select=items`);
-      const alreadyBooked = orders.reduce((sum, o) => {
-        if (!o.items) return sum;
-        return sum + countItemsInOrder(o.items);
-      }, 0);
+      const capRes = await fetch(`/.netlify/functions/check-slot-capacity?event_id=${activeEvent.id}&pickup_time=${encodeURIComponent(pickupTime)}`);
+      if (!capRes.ok) throw new Error('capacity check failed');
+      const { count: alreadyBooked } = await capRes.json();
 
       if (alreadyBooked + cartItemCount > activeEvent.max_items_per_slot) {
         errorEl.textContent = `That pickup window just filled up. Please choose a different time.`;
@@ -906,14 +899,10 @@ async function submitOrder() {
     const { url, session_id } = await sr.json();
 
     if (session_id) {
-      await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-        },
-        body: JSON.stringify({ stripe_session: session_id }),
+      await fetch('/.netlify/functions/save-stripe-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, session_id }),
       });
     }
 

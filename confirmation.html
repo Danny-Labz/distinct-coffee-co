@@ -287,14 +287,12 @@
         document.getElementById('payment-badge-wrap').innerHTML = '<div class="payment-badge paid">✓ Payment Confirmed</div>';
       }
 
-      // Fetch order from Supabase — use stored PIN, not regenerated
+      // Fetch order via the secured confirmation endpoint — returns only
+      // the non-sensitive fields needed for this screen (no email/phone).
       try {
-        const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/orders?id=eq.${orderId}&select=customer_name,pickup_time,event_name,event_date,total_cents,pickup_pin`,
-          { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
-        );
+        const res = await fetch(`/.netlify/functions/get-order-confirmation?order_id=${orderId}`);
         if (!res.ok) return;
-        const [order] = await res.json();
+        const order = await res.json();
         if (!order) return;
 
         // Display the PIN that was stored during order submission
