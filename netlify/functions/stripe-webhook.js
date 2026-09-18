@@ -75,41 +75,40 @@ exports.handler = async (event) => {
         });
         console.log(`Order ${orderId} marked as paid.`);
 
-        // 4. Send the order confirmation email — exactly once, right here,
-        // now that payment is genuinely confirmed. Skipped entirely if no
-        // email was provided (live orders can be fully anonymous).
+        // 4. Notify Danny of every paid order, always — plus a customer
+        // confirmation email when one was provided. send-notification
+        // handles that split internally: admin email always sends, customer
+        // email only if data.email is present.
         const siteUrl = process.env.SITE_URL || 'https://distinctcoffeeco.com';
-        if (order.email) {
-          try {
-            await fetch(`${siteUrl}/.netlify/functions/send-notification`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: 'order',
-                data: {
-                  event_name:     order.event_name,
-                  event_date:     order.event_date,
-                  customer_name:  order.customer_name,
-                  email:          order.email,
-                  phone:          order.phone,
-                  pickup_time:    order.pickup_time,
-                  milk_pref:      order.milk_pref,
-                  temp_pref:      order.temp_pref,
-                  addons:         order.addons,
-                  items:          order.items,
-                  total_cents:    order.total_cents,
-                  payment_method: order.payment_method,
-                  pickup_pin:     order.pickup_pin,
-                  notes:          order.notes,
-                  id:             order.id,
-                },
-              }),
-            });
-            console.log(`Confirmation email sent for order ${orderId}.`);
-          } catch (emailErr) {
-            console.error('Failed to send confirmation email:', emailErr);
-            // Don't fail the webhook over an email issue — payment is already confirmed.
-          }
+        try {
+          await fetch(`${siteUrl}/.netlify/functions/send-notification`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'order',
+              data: {
+                event_name:     order.event_name,
+                event_date:     order.event_date,
+                customer_name:  order.customer_name,
+                email:          order.email,
+                phone:          order.phone,
+                pickup_time:    order.pickup_time,
+                milk_pref:      order.milk_pref,
+                temp_pref:      order.temp_pref,
+                addons:         order.addons,
+                items:          order.items,
+                total_cents:    order.total_cents,
+                payment_method: order.payment_method,
+                pickup_pin:     order.pickup_pin,
+                notes:          order.notes,
+                id:             order.id,
+              },
+            }),
+          });
+          console.log(`Notification(s) sent for order ${orderId}.`);
+        } catch (emailErr) {
+          console.error('Failed to send notification:', emailErr);
+          // Don't fail the webhook over an email issue — payment is already confirmed.
         }
 
         // 5. Send the order confirmation SMS — same idempotency guarantee as
