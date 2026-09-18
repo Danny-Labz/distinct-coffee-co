@@ -365,6 +365,7 @@
         </label>
       </div>
       <div id="loyalty-contact-fields" style="display:none;padding-top:4px;">
+        <div style="font-size:10px;color:#999;margin-bottom:12px;">Enter at least one so we can find your account — email, phone, or both.</div>
         <div class="form-group">
           <label class="form-label">Email</label>
           <input type="email" class="form-input" id="loyalty-email" placeholder="you@example.com" />
@@ -826,6 +827,16 @@ function validate() {
   // stays required. Live walk-up orders are optional (loyalty opt-in only).
   if (!isLiveOrder && !document.getElementById('email').value.trim()) {
     errors.push('Email required.');
+  }
+
+  // If they opted into loyalty, we need at least one way to identify them —
+  // an opt-in with no email and no phone is useless for a loyalty record.
+  if (isLiveOrder && document.getElementById('loyalty-optin').checked) {
+    const loyaltyEmail = document.getElementById('loyalty-email').value.trim();
+    const loyaltyPhone = document.getElementById('loyalty-phone').value.trim();
+    if (!loyaltyEmail && !loyaltyPhone) {
+      errors.push('Please enter an email or phone number to join Rewards — or uncheck the box to skip.');
+    }
   }
 
   // Live in-person orders need no time selection at all — ASAP is implicit.
