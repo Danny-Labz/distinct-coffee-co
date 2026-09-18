@@ -1018,6 +1018,22 @@ async function submitOrder() {
         } catch(e) { console.warn('SMS failed:', e); }
       }
 
+      if (orderData.loyalty_optin && (orderData.email || orderData.phone)) {
+        try {
+          await fetch('/.netlify/functions/process-loyalty', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: orderData.customer_name,
+              email: orderData.email,
+              phone: orderData.phone,
+              items: orderData.items,
+              total_cents: orderData.total_cents,
+            }),
+          });
+        } catch(e) { console.warn('Loyalty processing failed:', e); }
+      }
+
       window.location.href = `confirmation.html?order_id=${orderId}&method=pay_at_event`;
       return;
     }
