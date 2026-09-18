@@ -64,7 +64,10 @@ exports.handler = async (event) => {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
-      customer_email,
+      // Stripe rejects an empty-string customer_email outright, so only
+      // include it when the customer actually provided one — live/walk-up
+      // orders can legitimately have no contact info at all.
+      ...(customer_email ? { customer_email } : {}),
       line_items: lineItems,
       metadata: { order_id },
       success_url: `${process.env.SITE_URL}/confirmation.html?order_id=${order_id}&session_id={CHECKOUT_SESSION_ID}`,
