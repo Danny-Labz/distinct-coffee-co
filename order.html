@@ -994,15 +994,15 @@ async function submitOrder() {
     const orderId = Array.isArray(saved) ? saved[0].id : saved.id;
 
     if (paymentMethod === 'pay_at_event') {
-      if (orderData.email) {
-        try {
-          await fetch('/.netlify/functions/send-notification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'order', data: { ...orderData, pickup_pin: pin, id: orderId } }),
-          });
-        } catch(e) { console.warn('Notification failed:', e); }
-      }
+      // Always notify Danny of the order — the function itself only emails
+      // the customer back if orderData.email is actually present.
+      try {
+        await fetch('/.netlify/functions/send-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'order', data: { ...orderData, pickup_pin: pin, id: orderId } }),
+        });
+      } catch(e) { console.warn('Notification failed:', e); }
 
       if (orderData.phone) {
         try {
