@@ -76,57 +76,61 @@ exports.handler = async (event) => {
         console.log(`Order ${orderId} marked as paid.`);
 
         // 4. Send the order confirmation email — exactly once, right here,
-        // now that payment is genuinely confirmed.
+        // now that payment is genuinely confirmed. Skipped entirely if no
+        // email was provided (live orders can be fully anonymous).
         const siteUrl = process.env.SITE_URL || 'https://distinctcoffeeco.com';
-        try {
-          await fetch(`${siteUrl}/.netlify/functions/send-notification`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'order',
-              data: {
-                event_name:     order.event_name,
-                event_date:     order.event_date,
-                customer_name:  order.customer_name,
-                email:          order.email,
-                phone:          order.phone,
-                pickup_time:    order.pickup_time,
-                milk_pref:      order.milk_pref,
-                temp_pref:      order.temp_pref,
-                addons:         order.addons,
-                items:          order.items,
-                total_cents:    order.total_cents,
-                payment_method: order.payment_method,
-                pickup_pin:     order.pickup_pin,
-                notes:          order.notes,
-                id:             order.id,
-              },
-            }),
-          });
-          console.log(`Confirmation email sent for order ${orderId}.`);
-        } catch (emailErr) {
-          console.error('Failed to send confirmation email:', emailErr);
-          // Don't fail the webhook over an email issue — payment is already confirmed.
+        if (order.email) {
+          try {
+            await fetch(`${siteUrl}/.netlify/functions/send-notification`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'order',
+                data: {
+                  event_name:     order.event_name,
+                  event_date:     order.event_date,
+                  customer_name:  order.customer_name,
+                  email:          order.email,
+                  phone:          order.phone,
+                  pickup_time:    order.pickup_time,
+                  milk_pref:      order.milk_pref,
+                  temp_pref:      order.temp_pref,
+                  addons:         order.addons,
+                  items:          order.items,
+                  total_cents:    order.total_cents,
+                  payment_method: order.payment_method,
+                  pickup_pin:     order.pickup_pin,
+                  notes:          order.notes,
+                  id:             order.id,
+                },
+              }),
+            });
+            console.log(`Confirmation email sent for order ${orderId}.`);
+          } catch (emailErr) {
+            console.error('Failed to send confirmation email:', emailErr);
+            // Don't fail the webhook over an email issue — payment is already confirmed.
+          }
         }
 
         // 5. Send the order confirmation SMS — same idempotency guarantee as
-        // the email above, since this whole block only runs once per order
-        // (guarded by the status === 'paid' check earlier in this function).
-        try {
-          const pickupLine = order.pickup_time === 'ASAP — In-Person Order'
-            ? "We're starting on it now!"
-            : `Pickup: ${order.pickup_time || 'TBD'}`;
-          const smsBody = `Distinct. Coffee Co. — Order confirmed! PIN: ${order.pickup_pin}. ${pickupLine} — ${order.event_name}`;
+        // the email above. Skipped entirely if no phone was provided.
+        if (order.phone) {
+          try {
+            const pickupLine = order.pickup_time === 'ASAP — In-Person Order'
+              ? "We're starting on it now!"
+              : `Pickup: ${order.pickup_time || 'TBD'}`;
+            const smsBody = `Distinct. Coffee Co. — Order confirmed! PIN: ${order.pickup_pin}. ${pickupLine} — ${order.event_name}`;
 
-          await fetch(`${siteUrl}/.netlify/functions/send-sms`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to: order.phone, message: smsBody }),
-          });
-          console.log(`Confirmation SMS attempted for order ${orderId}.`);
-        } catch (smsErr) {
-          console.error('Failed to send confirmation SMS:', smsErr);
-          // Same as email — don't fail the webhook over an SMS issue.
+            await fetch(`${siteUrl}/.netlify/functions/send-sms`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to: order.phone, message: smsBody }),
+            });
+            console.log(`Confirmation SMS attempted for order ${orderId}.`);
+          } catch (smsErr) {
+            console.error('Failed to send confirmation SMS:', smsErr);
+            // Same as email — don't fail the webhook over an SMS issue.
+          }
         }
 
       } catch (err) {
