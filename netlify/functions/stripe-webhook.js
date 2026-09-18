@@ -132,6 +132,27 @@ exports.handler = async (event) => {
           }
         }
 
+        // 6. Process loyalty punches — only if the customer actually opted
+        // in with an identifier. Never blocks or fails the order flow.
+        if (order.loyalty_optin && (order.email || order.phone)) {
+          try {
+            await fetch(`${siteUrl}/.netlify/functions/process-loyalty`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: order.customer_name,
+                email: order.email,
+                phone: order.phone,
+                items: order.items,
+                total_cents: order.total_cents,
+              }),
+            });
+            console.log(`Loyalty processed for order ${orderId}.`);
+          } catch (loyaltyErr) {
+            console.error('Failed to process loyalty:', loyaltyErr);
+          }
+        }
+
       } catch (err) {
         console.error('Failed to process paid order:', err);
       }
