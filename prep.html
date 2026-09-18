@@ -109,6 +109,131 @@
       border-color: var(--white);
     }
 
+    /* QUEUE VIEW BUTTON */
+    .queue-view-btn {
+      width: 100%;
+      background: rgba(21,101,192,0.12);
+      border: 1px solid rgba(21,101,192,0.3);
+      color: var(--blue);
+      padding: 13px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border-radius: 2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .queue-view-count {
+      background: var(--blue);
+      color: white;
+      font-size: 10px;
+      font-weight: 800;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+    }
+
+    /* QUEUE VIEW OVERLAY */
+    .queue-view-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--black);
+      z-index: 300;
+      overflow-y: auto;
+    }
+    .queue-view-overlay.open { display: block; }
+    .queue-view-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(248,246,242,0.1);
+      position: sticky;
+      top: 0;
+      background: var(--black);
+      z-index: 5;
+    }
+    .queue-view-close, .queue-view-refresh {
+      background: none;
+      border: none;
+      color: rgba(248,246,242,0.6);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      padding: 6px;
+    }
+    .queue-view-refresh { font-size: 16px; }
+    #queue-view-list { padding: 12px 20px 60px; }
+
+    .queue-card {
+      background: rgba(248,246,242,0.05);
+      border: 1px solid rgba(248,246,242,0.1);
+      border-left: 3px solid var(--white);
+      border-radius: 4px;
+      padding: 16px 18px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .queue-card:active { background: rgba(248,246,242,0.1); }
+    .queue-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .queue-card-pin {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 3px;
+    }
+    .queue-card-position {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: rgba(248,246,242,0.35);
+    }
+    .queue-card-name {
+      font-size: 14px;
+      font-weight: 400;
+      margin-bottom: 4px;
+    }
+    .queue-card-meta {
+      font-size: 11px;
+      color: rgba(248,246,242,0.45);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .queue-card-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 10px;
+    }
+    .queue-card-badge.paid { background: var(--green-bg); color: var(--green); }
+    .queue-card-badge.reserved { background: var(--blue-bg); color: var(--blue); }
+    .queue-view-empty {
+      text-align: center;
+      padding: 80px 24px;
+      color: rgba(248,246,242,0.3);
+      font-size: 13px;
+    }
+
     /* PIN INPUT */
     .pin-search {
       padding: 20px;
@@ -390,6 +515,10 @@
       <button class="mode-btn" id="mode-event" onclick="setMode('event')">Today's Event</button>
     </div>
 
+    <div class="filter-bar" style="padding:0 20px 16px;">
+      <button class="queue-view-btn" id="queue-view-btn" onclick="openQueueView()">📋 View Queue <span id="queue-view-count" class="queue-view-count">0</span></button>
+    </div>
+
     <div class="pin-search">
       <input type="text" id="pin-input" placeholder="Enter 4-digit PIN" inputmode="numeric" maxlength="4"
              oninput="this.value=this.value.replace(/[^0-9]/g,''); if(this.value.length===4) lookupPin(this.value);" />
@@ -400,6 +529,16 @@
     <div class="error-msg" id="error-msg"></div>
 
     <div id="order-display"></div>
+  </div>
+
+  <!-- QUEUE VIEW OVERLAY -->
+  <div id="queue-view-overlay" class="queue-view-overlay">
+    <div class="queue-view-topbar">
+      <button class="queue-view-close" onclick="closeQueueView()">← Back to Prep</button>
+      <div class="topbar-title">Queue — <span id="queue-view-mode-label">All Unfulfilled</span></div>
+      <button class="queue-view-refresh" onclick="loadQueueList()">↻</button>
+    </div>
+    <div id="queue-view-list"></div>
   </div>
 
   <script>
@@ -544,6 +683,7 @@
       if (currentMode === 'event' && !activeEventId) {
         indicator.textContent = 'No event scheduled for today';
         renderOrder(null);
+        updateQueueCount(0);
         return;
       }
 
@@ -555,16 +695,17 @@
 
         const orders = await adminFetchOrders(path);
 
+        // Count how many are pending overall (also drives the queue badge)
+        let countPath = `status=in.(paid,reserved)&fulfilled_at=is.null&select=id`;
+        if (currentMode === 'event' && activeEventId) countPath += `&event_id=eq.${activeEventId}`;
+        const allPending = await adminFetchOrders(countPath);
+        updateQueueCount(allPending.length);
+
         if (!orders.length) {
           indicator.textContent = currentMode === 'event' ? "No pending orders for today's event" : 'No pending orders in queue';
           renderOrder(null);
           return;
         }
-
-        // Count how many are behind this one
-        let countPath = `status=in.(paid,reserved)&fulfilled_at=is.null&select=id`;
-        if (currentMode === 'event' && activeEventId) countPath += `&event_id=eq.${activeEventId}`;
-        const allPending = await adminFetchOrders(countPath);
 
         indicator.textContent = `Next in queue · ${allPending.length} pending`;
         renderOrder(orders[0]);
@@ -780,6 +921,85 @@
         btn.textContent = '✓ Mark Fulfilled — Next Order';
         document.getElementById('error-msg').textContent = 'Could not update order. Please try again.';
         document.getElementById('error-msg').style.display = 'block';
+      }
+    }
+
+    // ─── QUEUE COUNT BADGE ─────────────────────────────────
+    function updateQueueCount(n) {
+      const el = document.getElementById('queue-view-count');
+      if (el) el.textContent = n;
+    }
+
+    // ─── FULL QUEUE VIEW ────────────────────────────────────
+    function openQueueView() {
+      document.getElementById('queue-view-mode-label').textContent =
+        currentMode === 'event' ? "Today's Event" : 'All Unfulfilled';
+      document.getElementById('queue-view-overlay').classList.add('open');
+      loadQueueList();
+    }
+
+    function closeQueueView() {
+      document.getElementById('queue-view-overlay').classList.remove('open');
+    }
+
+    async function loadQueueList() {
+      const listEl = document.getElementById('queue-view-list');
+      listEl.innerHTML = '<div class="queue-view-empty">Loading queue...</div>';
+
+      if (currentMode === 'event' && !activeEventId) {
+        listEl.innerHTML = '<div class="queue-view-empty">No event scheduled for today.</div>';
+        return;
+      }
+
+      try {
+        let path = `status=in.(paid,reserved)&fulfilled_at=is.null&order=created_at.asc&select=*`;
+        if (currentMode === 'event' && activeEventId) {
+          path += `&event_id=eq.${activeEventId}`;
+        }
+
+        const orders = await adminFetchOrders(path);
+        updateQueueCount(orders.length);
+
+        if (!orders.length) {
+          listEl.innerHTML = '<div class="queue-view-empty">☕<br><br>Queue is empty — all caught up.</div>';
+          return;
+        }
+
+        listEl.innerHTML = orders.map((o, idx) => {
+          const itemCount = o.items ? Object.values(o.items).reduce((sum, val) => {
+            return sum + (Array.isArray(val) ? val.length : (val.qty || 0));
+          }, 0) : 0;
+
+          const statusLabel = o.payment_method === 'pay_at_event' ? 'reserved' : (o.status || 'paid');
+          const statusText  = statusLabel === 'reserved' ? 'Pay at Pickup' : 'Paid Online';
+
+          return `
+            <div class="queue-card" onclick="jumpToOrder('${o.id}', '${o.pickup_pin || ''}')">
+              <div class="queue-card-top">
+                <span class="queue-card-pin">${o.pickup_pin || '----'}</span>
+                <span class="queue-card-position">#${idx + 1} in queue</span>
+              </div>
+              <div class="queue-card-name">${o.customer_name || 'Guest'}</div>
+              <div class="queue-card-meta">
+                <span class="queue-card-badge ${statusLabel}">${statusText}</span>
+                <span>${itemCount} item${itemCount === 1 ? '' : 's'}</span>
+                <span>${o.pickup_time || 'No time set'}</span>
+              </div>
+            </div>`;
+        }).join('');
+
+      } catch(e) {
+        listEl.innerHTML = '<div class="queue-view-empty">Could not load queue. Please try again.</div>';
+      }
+    }
+
+    // Tapping a queue card jumps straight into that order via PIN lookup,
+    // same path as typing the PIN manually — keeps rendering logic in one place.
+    function jumpToOrder(orderId, pin) {
+      closeQueueView();
+      if (pin) {
+        document.getElementById('pin-input').value = pin;
+        lookupPin(pin);
       }
     }
   </script>
