@@ -431,10 +431,10 @@
       .refresh-btn { margin-left: 0; }
 
       /* Hide desktop tables on mobile — EXCEPT ones with no mobile card view */
-      .table-wrap table:not(#inventory-table):not(#milk-table):not(#syrup-table):not(#ingredients-table):not(#recipe-ingredients-table):not(#cost-drinks-table):not(#cost-supply-table) { display: none !important; }
+      .table-wrap table:not(#inventory-table):not(#milk-table):not(#syrup-table):not(#ingredients-table):not(#recipe-ingredients-table):not(#cost-drinks-table):not(#cost-supply-table):not(#loyalty-table) { display: none !important; }
 
       /* These tables: keep visible but make them horizontally scrollable on mobile */
-      #inventory-table, #milk-table, #syrup-table, #ingredients-table, #recipe-ingredients-table, #cost-drinks-table, #cost-supply-table { display: table !important; font-size: 10px; }
+      #inventory-table, #milk-table, #syrup-table, #ingredients-table, #recipe-ingredients-table, #cost-drinks-table, #cost-supply-table, #loyalty-table { display: table !important; font-size: 10px; }
       .table-wrap { overflow-x: auto; }
 
       /* Show mobile cards instead */
@@ -698,6 +698,9 @@
       </button>
       <button class="tab" onclick="switchTab('costs', this)">
         Costs
+      </button>
+      <button class="tab" onclick="switchTab('loyalty', this)">
+        Loyalty
       </button>
     </div>
 
@@ -1150,6 +1153,52 @@
 
       </div>
 
+      <!-- ── LOYALTY PANEL ── -->
+      <div class="panel" id="panel-loyalty">
+        <div class="filter-bar">
+          <input type="text" class="filter-input" id="loyalty-search" placeholder="Search by name, email, or phone..." oninput="debounceLoyaltySearch()" />
+          <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="loadLoyaltyMembers()">↻ Refresh</button>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-card-label">Total Members</div>
+            <div class="stat-card-value" id="loyalty-total-members">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Unredeemed Rewards</div>
+            <div class="stat-card-value" id="loyalty-unredeemed">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Total Drinks Tracked</div>
+            <div class="stat-card-value" id="loyalty-total-drinks">—</div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <div class="loading" id="loyalty-loading">Loading members...</div>
+          <table id="loyalty-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Contact</th>
+                <th>Punch Card</th>
+                <th>Lifetime Drinks</th>
+                <th>Lifetime Spent</th>
+                <th>Rewards</th>
+                <th>Last Visit</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="loyalty-body"></tbody>
+          </table>
+          <div class="empty-state" id="loyalty-empty" style="display:none;">
+            <div class="empty-state-icon">☕</div>
+            <div class="empty-state-text">No loyalty members yet</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1403,6 +1452,7 @@
       loadEvents();
       loadReports();
       loadIngredients();
+      loadLoyaltyMembers();
     }
 
     function updateClock() {
@@ -2912,6 +2962,103 @@
       } catch (e) {
         console.error('Could not load event cost dashboard:', e);
         alert(`Could not load cost data: ${e.message}`);
+      }
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    // LOYALTY TAB
+    // ═══════════════════════════════════════════════════════
+
+    let allLoyaltyMembers = [];
+    let loyaltySearchTimer = null;
+
+    function debounceLoyaltySearch() {
+      clearTimeout(loyaltySearchTimer);
+      loyaltySearchTimer = setTimeout(loadLoyaltyMembers, 350);
+    }
+
+    async function loadLoyaltyMembers() {
+      document.getElementById('loyalty-loading').style.display = 'block';
+      document.getElementById('loyalty-table').style.display  = 'none';
+      document.getElementById('loyalty-empty').style.display  = 'none';
+
+      try {
+        const search = document.getElementById('loyalty-search').value.trim();
+        const qs = search ? `search=${encodeURIComponent(search)}` : '';
+        const res = await fetch(`/.netlify/functions/admin-loyalty${qs ? '?' + qs : ''}`);
+        if (!res.ok) throw new Error(`admin-loyalty error: ${res.status}`);
+        allLoyaltyMembers = await res.json();
+        renderLoyaltyMembers();
+      } catch (e) {
+        document.getElementById('loyalty-loading').textContent = `Failed to load members: ${e.message}`;
+      }
+    }
+
+    function renderLoyaltyMembers() {
+      document.getElementById('loyalty-loading').style.display = 'none';
+
+      // Stats
+      const totalMembers = allLoyaltyMembers.length;
+      const unredeemed = allLoyaltyMembers.reduce((sum, m) => sum + Math.max(0, m.rewards_earned - m.rewards_redeemed), 0);
+      const totalDrinks = allLoyaltyMembers.reduce((sum, m) => sum + (m.total_drinks || 0), 0);
+      document.getElementById('loyalty-total-members').textContent = totalMembers;
+      document.getElementById('loyalty-unredeemed').textContent    = unredeemed;
+      document.getElementById('loyalty-total-drinks').textContent  = totalDrinks;
+
+      if (!allLoyaltyMembers.length) {
+        document.getElementById('loyalty-table').style.display = 'none';
+        document.getElementById('loyalty-empty').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('loyalty-table').style.display = 'table';
+      document.getElementById('loyalty-empty').style.display = 'none';
+
+      document.getElementById('loyalty-body').innerHTML = allLoyaltyMembers.map(m => {
+        const unredeemedCount = Math.max(0, m.rewards_earned - m.rewards_redeemed);
+        const contact = [m.email, m.phone].filter(Boolean).join(' · ') || '—';
+        const lastVisit = m.last_order_at
+          ? new Date(m.last_order_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+          : '—';
+        const punchDots = Array.from({ length: 10 }, (_, i) =>
+          `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;background:${i < m.punch_count ? 'var(--black)' : 'var(--off-white)'};border:1px solid var(--border);"></span>`
+        ).join('');
+
+        return `
+        <tr>
+          <td class="td-name">${m.name || 'Unknown'}</td>
+          <td class="td-small">${contact}</td>
+          <td>${punchDots} <span class="td-small">${m.punch_count}/10</span></td>
+          <td>${m.total_drinks || 0}</td>
+          <td>$${((m.total_spent_cents||0)/100).toFixed(2)}</td>
+          <td>
+            ${unredeemedCount > 0
+              ? `<span style="background:var(--green-bg);color:var(--green);font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;">${unredeemedCount} FREE DRINK${unredeemedCount>1?'S':''}</span>`
+              : `<span class="td-small">${m.rewards_earned || 0} earned</span>`}
+          </td>
+          <td class="td-small">${lastVisit}</td>
+          <td>
+            ${unredeemedCount > 0
+              ? `<button class="refresh-btn" style="padding:6px 12px;font-size:8px;" onclick="redeemLoyaltyReward('${m.id}')">Redeem</button>`
+              : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function redeemLoyaltyReward(memberId) {
+      if (!confirm('Mark one free drink reward as redeemed for this member?')) return;
+      try {
+        const res = await fetch('/.netlify/functions/admin-loyalty', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ member_id: memberId }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        loadLoyaltyMembers();
+      } catch (e) {
+        alert(`Could not redeem reward: ${e.message}`);
       }
     }
 
