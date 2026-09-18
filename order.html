@@ -366,7 +366,7 @@
         <div class="payment-opt-title">Pay Now</div>
         <div class="payment-opt-desc">Secure card payment via Stripe. Confirmed instantly.</div>
       </button>
-      <button class="payment-opt" onclick="selectPayment(this,'pay_at_event')">
+      <button class="payment-opt" id="pay-at-event-opt" onclick="selectPayment(this,'pay_at_event')">
         <div class="payment-opt-title">Pay at Event</div>
         <div class="payment-opt-desc">Cash or card on the day. Order reserved immediately.</div>
       </button>
@@ -404,6 +404,16 @@ const isLiveOrder = new URLSearchParams(window.location.search).get('live') === 
 // ── INIT ──────────────────────────────────────
 window.addEventListener('load', async () => {
   await Promise.allSettled([loadMenu(), loadEvent(), loadAddons()]);
+
+  // Live in-person orders must be paid at checkout — no "pay at event" since
+  // the customer is already at the event; removes any ambiguity about
+  // whether cash actually got collected for a walk-up order.
+  if (isLiveOrder) {
+    const payAtEventOpt = document.getElementById('pay-at-event-opt');
+    if (payAtEventOpt) payAtEventOpt.remove();
+    document.querySelector('.payment-options').style.gridTemplateColumns = '1fr';
+    paymentMethod = 'pay_now';
+  }
 });
 
 // ── FETCH HELPERS ─────────────────────────────
@@ -813,6 +823,10 @@ async function submitOrder() {
   const errorEl = document.getElementById('error-msg');
   const btn = document.getElementById('submit-btn');
   errorEl.style.display = 'none';
+
+  // Defensive guard — live in-person orders must always be Pay Now,
+  // regardless of how paymentMethod ended up set.
+  if (isLiveOrder) paymentMethod = 'pay_now';
 
   const errors = validate();
   if (errors.length) {
