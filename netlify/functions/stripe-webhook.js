@@ -109,6 +109,26 @@ exports.handler = async (event) => {
           // Don't fail the webhook over an email issue — payment is already confirmed.
         }
 
+        // 5. Send the order confirmation SMS — same idempotency guarantee as
+        // the email above, since this whole block only runs once per order
+        // (guarded by the status === 'paid' check earlier in this function).
+        try {
+          const pickupLine = order.pickup_time === 'ASAP — In-Person Order'
+            ? "We're starting on it now!"
+            : `Pickup: ${order.pickup_time || 'TBD'}`;
+          const smsBody = `Distinct. Coffee Co. — Order confirmed! PIN: ${order.pickup_pin}. ${pickupLine} — ${order.event_name}`;
+
+          await fetch(`${siteUrl}/.netlify/functions/send-sms`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: order.phone, message: smsBody }),
+          });
+          console.log(`Confirmation SMS attempted for order ${orderId}.`);
+        } catch (smsErr) {
+          console.error('Failed to send confirmation SMS:', smsErr);
+          // Same as email — don't fail the webhook over an SMS issue.
+        }
+
       } catch (err) {
         console.error('Failed to process paid order:', err);
       }
