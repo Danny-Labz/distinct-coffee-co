@@ -142,11 +142,14 @@ exports.handler = async (event) => {
           ${footer}
         </div>`;
 
-      // Send both emails in parallel
-      await Promise.all([
-        sendEmail(NOTIFY_EMAIL, adminSubject, adminHtml),
-        sendEmail(data.email, customerSubject, customerHtml),
-      ]);
+      // Admin notification always fires — Danny should know about every
+      // order regardless of what contact info the customer shared. The
+      // customer confirmation only sends if they actually gave an email.
+      const sends = [sendEmail(NOTIFY_EMAIL, adminSubject, adminHtml)];
+      if (data.email) {
+        sends.push(sendEmail(data.email, customerSubject, customerHtml));
+      }
+      await Promise.all(sends);
 
     // ── INQUIRY EMAILS ────────────────────────────────────
     } else if (type === 'inquiry') {
