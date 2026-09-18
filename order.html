@@ -927,6 +927,18 @@ async function submitOrder() {
         });
       } catch(e) { console.warn('Notification failed:', e); }
 
+      try {
+        const pickupLine = orderData.pickup_time === 'ASAP — In-Person Order'
+          ? "We're starting on it now!"
+          : `Pickup: ${orderData.pickup_time || 'TBD'}`;
+        const smsBody = `Distinct. Coffee Co. — Order confirmed! PIN: ${pin}. ${pickupLine} — ${orderData.event_name}`;
+        await fetch('/.netlify/functions/send-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: orderData.phone, message: smsBody }),
+        });
+      } catch(e) { console.warn('SMS failed:', e); }
+
       window.location.href = `confirmation.html?order_id=${orderId}&method=pay_at_event`;
       return;
     }
