@@ -335,14 +335,47 @@
         <input type="text" class="form-input" id="last-name" placeholder="Smith" />
       </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Email</label>
-      <input type="email" class="form-input" id="email" placeholder="you@example.com" />
+
+    <!-- Standard contact fields — always shown for pre-orders, since we need
+         a way to reach you before the event. Hidden for live orders in favor
+         of the optional loyalty card below. -->
+    <div id="standard-contact-fields">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="email" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input type="tel" class="form-input" id="phone" placeholder="(555) 000-0000" />
+      </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Phone</label>
-      <input type="tel" class="form-input" id="phone" placeholder="(555) 000-0000" />
+
+    <!-- Live order loyalty card — contact info is entirely optional here
+         since the customer is standing right in front of us and doesn't
+         need updates to know their order is ready. -->
+    <div id="loyalty-card" style="display:none;background:var(--off-white);border-radius:6px;padding:20px 22px;margin-bottom:18px;">
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">
+        <input type="checkbox" id="loyalty-optin" onchange="toggleLoyaltyFields()"
+               style="width:20px;height:20px;margin-top:1px;flex-shrink:0;accent-color:var(--black);" />
+        <label for="loyalty-optin" style="cursor:pointer;">
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px;">☕ Join Distinct. Rewards</div>
+          <div style="font-size:12px;color:#777;line-height:1.6;">
+            Get a text or email receipt, plus early access to future perks as we roll out our loyalty program. Totally optional — happy to just make your drink either way.
+          </div>
+        </label>
+      </div>
+      <div id="loyalty-contact-fields" style="display:none;padding-top:4px;">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="loyalty-email" placeholder="you@example.com" />
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Phone</label>
+          <input type="tel" class="form-input" id="loyalty-phone" placeholder="(555) 000-0000" />
+        </div>
+      </div>
     </div>
+
     <div class="form-group">
       <label class="form-label">Notes (optional)</label>
       <textarea class="form-textarea" id="notes" placeholder="Special requests..."></textarea>
@@ -413,8 +446,19 @@ window.addEventListener('load', async () => {
     if (payAtEventOpt) payAtEventOpt.remove();
     document.querySelector('.payment-options').style.gridTemplateColumns = '1fr';
     paymentMethod = 'pay_now';
+
+    // No pickup-time coordination needed for a walk-up order, so contact
+    // info isn't required — swap the standard fields for the optional
+    // loyalty opt-in card instead.
+    document.getElementById('standard-contact-fields').style.display = 'none';
+    document.getElementById('loyalty-card').style.display = 'block';
   }
 });
+
+function toggleLoyaltyFields() {
+  const checked = document.getElementById('loyalty-optin').checked;
+  document.getElementById('loyalty-contact-fields').style.display = checked ? 'block' : 'none';
+}
 
 // ── FETCH HELPERS ─────────────────────────────
 async function sbFetch(path) {
@@ -777,7 +821,12 @@ function validate() {
   const errors = [];
   if (!drinks.length) errors.push('Please add at least one drink.');
   if (!document.getElementById('first-name').value.trim()) errors.push('First name required.');
-  if (!document.getElementById('email').value.trim()) errors.push('Email required.');
+
+  // Pre-orders need a way to reach the customer before the event — email
+  // stays required. Live walk-up orders are optional (loyalty opt-in only).
+  if (!isLiveOrder && !document.getElementById('email').value.trim()) {
+    errors.push('Email required.');
+  }
 
   // Live in-person orders need no time selection at all — ASAP is implicit.
   if (!isLiveOrder) {
@@ -883,13 +932,24 @@ async function submitOrder() {
 
   const allAddonsFlat = [...new Set(drinks.flatMap(d => d.addons))];
 
+  // Pre-orders use the always-required standard fields. Live orders pull
+  // from the optional loyalty card instead — empty strings if the customer
+  // skipped it, which is expected and fine.
+  const loyaltyOptedIn = isLiveOrder && document.getElementById('loyalty-optin').checked;
+  const customerEmail = isLiveOrder
+    ? document.getElementById('loyalty-email').value.trim()
+    : document.getElementById('email').value.trim();
+  const customerPhone = isLiveOrder
+    ? document.getElementById('loyalty-phone').value.trim()
+    : document.getElementById('phone').value.trim();
+
   const orderData = {
     event_id:       hasEvent ? activeEvent.id : '00000000-0000-0000-0000-000000000000',
     event_name:     hasEvent ? activeEvent.name : 'Custom Order',
     event_date:     hasEvent ? activeEvent.date : pickupTime,
     customer_name:  `${document.getElementById('first-name').value.trim()} ${document.getElementById('last-name').value.trim()}`.trim(),
-    email:          document.getElementById('email').value.trim(),
-    phone:          document.getElementById('phone').value.trim(),
+    email:          customerEmail,
+    phone:          customerPhone,
     pickup_time:    pickupTime,
     milk_pref:      milkSummary,
     temp_pref:      tempSummary,
@@ -899,6 +959,10 @@ async function submitOrder() {
     status:         paymentMethod === 'pay_at_event' ? 'reserved' : 'pending',
     payment_method: paymentMethod,
     pickup_pin:     pin,
+    // Marks whether this customer opted into loyalty updates — not used by
+    // anything yet, but keeps this distinguishable from pre-order contacts
+    // once the loyalty program itself gets built.
+    loyalty_optin:  loyaltyOptedIn,
     notes:          `${location ? 'Location: '+location+' | ' : ''}${document.getElementById('notes').value.trim()}`,
   };
 
@@ -919,25 +983,29 @@ async function submitOrder() {
     const orderId = Array.isArray(saved) ? saved[0].id : saved.id;
 
     if (paymentMethod === 'pay_at_event') {
-      try {
-        await fetch('/.netlify/functions/send-notification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'order', data: { ...orderData, pickup_pin: pin, id: orderId } }),
-        });
-      } catch(e) { console.warn('Notification failed:', e); }
+      if (orderData.email) {
+        try {
+          await fetch('/.netlify/functions/send-notification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'order', data: { ...orderData, pickup_pin: pin, id: orderId } }),
+          });
+        } catch(e) { console.warn('Notification failed:', e); }
+      }
 
-      try {
-        const pickupLine = orderData.pickup_time === 'ASAP — In-Person Order'
-          ? "We're starting on it now!"
-          : `Pickup: ${orderData.pickup_time || 'TBD'}`;
-        const smsBody = `Distinct. Coffee Co. — Order confirmed! PIN: ${pin}. ${pickupLine} — ${orderData.event_name}`;
-        await fetch('/.netlify/functions/send-sms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: orderData.phone, message: smsBody }),
-        });
-      } catch(e) { console.warn('SMS failed:', e); }
+      if (orderData.phone) {
+        try {
+          const pickupLine = orderData.pickup_time === 'ASAP — In-Person Order'
+            ? "We're starting on it now!"
+            : `Pickup: ${orderData.pickup_time || 'TBD'}`;
+          const smsBody = `Distinct. Coffee Co. — Order confirmed! PIN: ${pin}. ${pickupLine} — ${orderData.event_name}`;
+          await fetch('/.netlify/functions/send-sms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: orderData.phone, message: smsBody }),
+          });
+        } catch(e) { console.warn('SMS failed:', e); }
+      }
 
       window.location.href = `confirmation.html?order_id=${orderId}&method=pay_at_event`;
       return;
