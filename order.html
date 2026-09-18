@@ -279,7 +279,14 @@
       <div id="ev-cutoff" style="font-size:9px;opacity:0.3;margin-top:6px;"></div>
     </div>
 
-    <div class="section-label">Pickup / Service Time</div>
+    <div class="section-label" id="pickup-section-label">Pickup / Service Time</div>
+
+    <!-- LIVE ORDER (QR scan at the event) — no time slot needed, order is being made now -->
+    <div id="live-order-note" style="display:none;background:#0a0a0a;color:#f8f6f2;padding:18px 20px;border-radius:2px;margin-bottom:8px;">
+      <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;opacity:0.5;margin-bottom:6px;">⚡ In-Person Order</div>
+      <div style="font-size:13px;line-height:1.6;">You're ordering live at the event — we'll start on this right away. No pickup time needed, just find us at the counter.</div>
+    </div>
+
     <div id="pickup-slots" style="display:none;">
       <div class="form-group">
         <label class="form-label">Select pickup window</label>
@@ -387,6 +394,12 @@ let addonOptions = [];  // [{name, price_cents}]
 
 let paymentMethod = 'pay_now';
 let activeEvent = null;
+
+// ?live=1 — scanned from the in-person QR code at the event. No pickup time
+// needed since the customer is standing right here; order goes straight
+// into the prep queue as ASAP. Pre-orders (no ?live=1) keep the full
+// time slot picker unaffected — this only changes the live-scan path.
+const isLiveOrder = new URLSearchParams(window.location.search).get('live') === '1';
 
 // ── INIT ──────────────────────────────────────
 window.addEventListener('load', async () => {
@@ -597,12 +610,25 @@ async function loadEvent() {
 
     activeEvent = events[0];
 
-    if (activeEvent.order_cutoff && new Date() > new Date(activeEvent.order_cutoff)) {
+    // Live in-person orders bypass the pre-order cutoff entirely — the
+    // customer is physically at the event ordering right now, so "order by"
+    // deadlines (which exist to protect prep time for pre-orders) don't apply.
+    if (!isLiveOrder && activeEvent.order_cutoff && new Date() > new Date(activeEvent.order_cutoff)) {
       showCustomTime(); return;
     }
 
     document.getElementById('ev-name').textContent = activeEvent.name;
     document.getElementById('ev-meta').textContent = [activeEvent.date, activeEvent.location, activeEvent.pickup_hours].filter(Boolean).join(' · ');
+
+    if (isLiveOrder) {
+      // Live QR order — no time slot picker, no cutoff messaging, just show
+      // the event context and an ASAP note.
+      document.getElementById('pickup-section-label').textContent = 'Order Status';
+      document.getElementById('live-order-note').style.display = 'block';
+      document.getElementById('event-banner').style.display = 'block';
+      return;
+    }
+
     if (activeEvent.order_cutoff) {
       const c = new Date(activeEvent.order_cutoff);
       document.getElementById('ev-cutoff').textContent = `Order by ${c.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}`;
@@ -743,9 +769,12 @@ function validate() {
   if (!document.getElementById('first-name').value.trim()) errors.push('First name required.');
   if (!document.getElementById('email').value.trim()) errors.push('Email required.');
 
-  const hasEvent = activeEvent && document.getElementById('pickup-slots').style.display !== 'none';
-  if (hasEvent && !document.getElementById('pickup-time').value) errors.push('Please select a pickup time.');
-  if (!hasEvent && !document.getElementById('custom-datetime').value) errors.push('Please select a date and time.');
+  // Live in-person orders need no time selection at all — ASAP is implicit.
+  if (!isLiveOrder) {
+    const hasEvent = activeEvent && document.getElementById('pickup-slots').style.display !== 'none';
+    if (hasEvent && !document.getElementById('pickup-time').value) errors.push('Please select a pickup time.');
+    if (!hasEvent && !document.getElementById('custom-datetime').value) errors.push('Please select a date and time.');
+  }
   return errors;
 }
 
@@ -797,11 +826,15 @@ async function submitOrder() {
   btn.textContent = 'Saving order...';
 
   const hasEvent = activeEvent && document.getElementById('pickup-slots').style.display !== 'none';
-  const pickupTime = hasEvent
-    ? document.getElementById('pickup-time').value
-    : document.getElementById('custom-datetime').value;
+  const pickupTime = isLiveOrder
+    ? 'ASAP — In-Person Order'
+    : (hasEvent
+        ? document.getElementById('pickup-time').value
+        : document.getElementById('custom-datetime').value);
 
-  if (hasEvent && activeEvent.max_items_per_slot) {
+  // Slot capacity only applies to pre-orders claiming a specific window —
+  // live orders aren't booking a slot, so there's nothing to check against.
+  if (!isLiveOrder && hasEvent && activeEvent.max_items_per_slot) {
     const cartItemCount = drinks.length;
     try {
       const capRes = await fetch(`/.netlify/functions/check-slot-capacity?event_id=${activeEvent.id}&pickup_time=${encodeURIComponent(pickupTime)}`);
