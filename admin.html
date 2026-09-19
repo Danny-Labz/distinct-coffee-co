@@ -643,6 +643,43 @@
       border: none;
     }
     .modal-btn-save { background: var(--black); color: var(--white); }
+
+    /* RECEIPT REVIEW ROWS */
+    .receipt-row {
+      background: var(--off-white);
+      border-radius: 4px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .receipt-row-raw {
+      font-size: 10px;
+      color: var(--mid);
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+    .receipt-row-fields {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .receipt-row-fields select,
+    .receipt-row-fields input {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      background: var(--white);
+    }
+    .receipt-row-skip {
+      font-size: 9px;
+      color: var(--red);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .receipt-row.skipped { opacity: 0.4; }
+    .receipt-row.skipped .receipt-row-fields { pointer-events: none; }
     .modal-btn-save:hover { background: #222; }
     .modal-btn-cancel { background: var(--off-white); color: var(--black); }
     .modal-btn-delete { background: var(--red-bg); color: var(--red); }
@@ -1127,6 +1164,8 @@
         <div id="cost-sub-ingredients" style="display:none;">
           <div class="filter-bar">
             <button class="refresh-btn" onclick="openIngredientModal()">+ Add Ingredient</button>
+            <button class="refresh-btn" style="background:var(--blue);color:white;" onclick="document.getElementById('receipt-file-input').click()">📷 Scan Receipt</button>
+            <input type="file" id="receipt-file-input" accept="image/*" capture="environment" style="display:none;" onchange="handleReceiptUpload(event)" />
             <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="loadIngredients()">↻ Refresh</button>
           </div>
           <div class="table-wrap">
@@ -1256,6 +1295,33 @@
         <div style="flex:1;"></div>
         <button class="modal-btn-cancel" onclick="closeIngredientModal()">Cancel</button>
         <button class="modal-btn-save" onclick="saveIngredient()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEIPT SCAN LOADING OVERLAY -->
+  <div id="receipt-loading-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:320px;text-align:center;padding:40px 24px;">
+      <div style="font-size:32px;margin-bottom:16px;">📷</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Reading your receipt...</div>
+      <div style="font-size:11px;color:var(--mid);">This usually takes a few seconds</div>
+    </div>
+  </div>
+
+  <!-- RECEIPT REVIEW MODAL -->
+  <div id="receipt-review-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:600px;">
+      <div class="modal-header">
+        <span>Review Receipt — <span id="receipt-item-count">0</span> items found</span>
+        <button class="modal-close" onclick="closeReceiptReview()">×</button>
+      </div>
+      <div class="modal-body" style="max-height:60vh;overflow-y:auto;">
+        <div class="msg msg-error" id="receipt-review-error"></div>
+        <div id="receipt-review-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-cancel" onclick="closeReceiptReview()">Cancel</button>
+        <button class="modal-btn-save" onclick="applyReceiptChanges()">Apply Changes</button>
       </div>
     </div>
   </div>
@@ -3059,6 +3125,219 @@
         loadLoyaltyMembers();
       } catch (e) {
         alert(`Could not redeem reward: ${e.message}`);
+      }
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    // RECEIPT SCANNING — Costs > Ingredients
+    // ═══════════════════════════════════════════════════════
+
+    let receiptParsedItems = [];
+
+    async function handleReceiptUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // Reset the input so selecting the same file again still fires onchange
+      event.target.value = '';
+
+      document.getElementById('receipt-loading-overlay').style.display = 'flex';
+
+      try {
+        const base64 = await fileToBase64(file);
+        const res = await fetch('/.netlify/functions/parse-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_base64: base64, media_type: file.type || 'image/jpeg' }),
+        });
+
+        const result = await res.json();
+        document.getElementById('receipt-loading-overlay').style.display = 'none';
+
+        if (!res.ok) {
+          alert(result.error || 'Could not read the receipt. Please try again or enter items manually.');
+          return;
+        }
+
+        if (!result.items || !result.items.length) {
+          alert("Couldn't find any items on that receipt. Try a clearer photo, or add ingredients manually.");
+          return;
+        }
+
+        receiptParsedItems = result.items.map(item => ({
+          ...item,
+          skipped: false,
+          matchType: 'new', // 'new' or an ingredient id string
+        }));
+
+        openReceiptReview();
+
+      } catch (e) {
+        document.getElementById('receipt-loading-overlay').style.display = 'none';
+        alert(`Something went wrong reading the receipt: ${e.message}`);
+      }
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // reader.result is "data:image/jpeg;base64,....." — strip the prefix
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Very light fuzzy match — normalizes both strings and checks whether
+    // either contains a meaningful chunk of the other. Good enough to
+    // surface a sensible default suggestion; the admin confirms or changes
+    // it either way, so this never silently applies a wrong match.
+    function suggestIngredientMatch(rawText) {
+      const normalize = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const target = normalize(rawText);
+      if (!target) return null;
+
+      let best = null, bestScore = 0;
+      allIngredients.forEach(ing => {
+        const name = normalize(ing.name);
+        if (!name) return;
+        let score = 0;
+        if (target.includes(name) || name.includes(target)) {
+          score = Math.min(name.length, target.length);
+        }
+        if (score > bestScore) { bestScore = score; best = ing; }
+      });
+
+      // Require a reasonably meaningful overlap before suggesting a match
+      return bestScore >= 4 ? best : null;
+    }
+
+    function openReceiptReview() {
+      renderReceiptReview();
+      document.getElementById('receipt-review-overlay').style.display = 'flex';
+    }
+
+    function closeReceiptReview() {
+      document.getElementById('receipt-review-overlay').style.display = 'none';
+      receiptParsedItems = [];
+    }
+
+    function renderReceiptReview() {
+      document.getElementById('receipt-item-count').textContent = receiptParsedItems.length;
+      document.getElementById('receipt-review-error').style.display = 'none';
+
+      const ingredientOptions = allIngredients.map(ing =>
+        `<option value="${ing.id}">${ing.name} (${ing.unit})</option>`
+      ).join('');
+
+      document.getElementById('receipt-review-list').innerHTML = receiptParsedItems.map((item, idx) => {
+        const suggested = suggestIngredientMatch(item.raw_text);
+        if (suggested && item.matchType === 'new' && !item._suggestionApplied) {
+          item.matchType = suggested.id;
+          item._suggestionApplied = true;
+        }
+
+        return `
+        <div class="receipt-row ${item.skipped ? 'skipped' : ''}" id="receipt-row-${idx}">
+          <div class="receipt-row-raw">"${item.raw_text}"</div>
+          <div class="receipt-row-fields">
+            <select onchange="updateReceiptItem(${idx}, 'matchType', this.value)">
+              <option value="new" ${item.matchType === 'new' ? 'selected' : ''}>+ Create new ingredient</option>
+              ${allIngredients.map(ing =>
+                `<option value="${ing.id}" ${item.matchType === ing.id ? 'selected' : ''}>${ing.name} (${ing.unit})</option>`
+              ).join('')}
+            </select>
+            <input type="text" value="${(item.matchType === 'new' ? item.raw_text : '').replace(/"/g,'&quot;')}"
+                   placeholder="Name (if new)" id="receipt-name-${idx}"
+                   onchange="updateReceiptItem(${idx}, 'newName', this.value)"
+                   ${item.matchType !== 'new' ? 'disabled style="opacity:0.4;"' : ''} />
+            <input type="number" step="0.01" value="${(item.price_cents/100).toFixed(2)}"
+                   onchange="updateReceiptItem(${idx}, 'price_cents', Math.round(parseFloat(this.value)*100))" />
+          </div>
+          <span class="receipt-row-skip" onclick="toggleSkipReceiptItem(${idx})">${item.skipped ? 'Include this item' : 'Skip this item'}</span>
+        </div>`;
+      }).join('');
+    }
+
+    function updateReceiptItem(idx, field, value) {
+      if (field === 'newName') {
+        receiptParsedItems[idx].raw_text = value; // keep in sync for new-ingredient naming
+      } else {
+        receiptParsedItems[idx][field] = value;
+      }
+      if (field === 'matchType') renderReceiptReview(); // re-render to enable/disable name field
+    }
+
+    function toggleSkipReceiptItem(idx) {
+      receiptParsedItems[idx].skipped = !receiptParsedItems[idx].skipped;
+      renderReceiptReview();
+    }
+
+    async function applyReceiptChanges() {
+      const errorEl = document.getElementById('receipt-review-error');
+      errorEl.style.display = 'none';
+
+      const toApply = receiptParsedItems.filter(i => !i.skipped);
+      if (!toApply.length) {
+        errorEl.textContent = 'All items are skipped — nothing to apply.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        for (const item of toApply) {
+          const purchaseCostCents = item.price_cents;
+
+          if (item.matchType === 'new') {
+            const name = (item.raw_text || '').trim();
+            if (!name) continue;
+            // New ingredients need a recipe unit + yield the admin will fill
+            // in later — default to "each" / yield 1 so cost_cents is at
+            // least sane (equal to purchase cost) until edited properly.
+            await fetch(`${SUPABASE_URL}/rest/v1/ingredients`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
+              body: JSON.stringify({
+                name,
+                purchase_unit: 'unit',
+                purchase_cost_cents: purchaseCostCents,
+                unit: 'each',
+                yield_quantity: 1,
+                cost_cents: purchaseCostCents,
+                sort_order: allIngredients.length + 1,
+              }),
+            });
+          } else {
+            // Matched to an existing ingredient — update its purchase cost,
+            // recalculating cost_cents from its existing yield so the
+            // per-recipe-unit cost stays mathematically correct.
+            const existing = allIngredients.find(ing => ing.id === item.matchType);
+            if (!existing) continue;
+            const yieldQty = existing.yield_quantity || 1;
+            const newCostCents = Math.round(purchaseCostCents / yieldQty);
+
+            await fetch(`${SUPABASE_URL}/rest/v1/ingredients?id=eq.${item.matchType}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
+              body: JSON.stringify({
+                purchase_cost_cents: purchaseCostCents,
+                cost_cents: newCostCents,
+              }),
+            });
+          }
+        }
+
+        closeReceiptReview();
+        loadIngredients();
+        alert(`Applied ${toApply.length} item(s) to your ingredients.`);
+
+      } catch (e) {
+        errorEl.textContent = `Could not apply changes: ${e.message}`;
+        errorEl.style.display = 'block';
       }
     }
 
