@@ -16,13 +16,31 @@ function countDrinksInOrder(items) {
   }, 0);
 }
 
+// Normalize so "(305) 505-0002" and "3055050002" and "+13055050002" all
+// match the same member instead of silently creating duplicates. Keeps the
+// last 10 digits, which handles a leading US country code consistently.
+function normalizePhone(phone) {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
+function normalizeEmail(email) {
+  return email ? email.trim().toLowerCase() : '';
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
-    const { name, email, phone, items, total_cents } = JSON.parse(event.body);
+    const body = JSON.parse(event.body);
+    const name = body.name;
+    const email = normalizeEmail(body.email);
+    const phone = normalizePhone(body.phone);
+    const items = body.items;
+    const total_cents = body.total_cents;
 
     if (!email && !phone) {
       return { statusCode: 200, body: JSON.stringify({ skipped: true, reason: 'no identifier provided' }) };
