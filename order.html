@@ -347,10 +347,15 @@
       <div class="form-group">
         <label class="form-label">Phone</label>
         <input type="tel" class="form-input" id="phone" placeholder="(555) 000-0000" />
+        <div style="font-size:10px;color:#999;margin-top:8px;line-height:1.6;">
+          By providing your phone number, you consent to receive SMS text messages from Distinct. Coffee Co. about this order, including confirmation and pickup details. Message and data rates may apply. Message frequency varies. Reply STOP to opt out at any time, HELP for help. Consent is not a condition of purchase.
+        </div>
       </div>
 
       <!-- Pre-order loyalty opt-in — email/phone are already required above,
-           so this is just a checkbox, no extra fields needed. -->
+           so this is just a checkbox, no extra fields needed. Consent
+           language here must explicitly cover SMS since checking this box
+           is how phone-based opt-in actually happens in this system. -->
       <div id="preorder-loyalty-card" style="background:var(--off-white);border-radius:6px;padding:18px 20px;margin-bottom:18px;">
         <div style="display:flex;align-items:flex-start;gap:12px;">
           <input type="checkbox" id="preorder-loyalty-optin"
@@ -358,7 +363,7 @@
           <label for="preorder-loyalty-optin" style="cursor:pointer;">
             <div style="font-size:14px;font-weight:600;margin-bottom:4px;">☕ Join Distinct. Rewards</div>
             <div style="font-size:12px;color:#777;line-height:1.6;">
-              Every drink counts toward your card — your 10th is on us. We'll use the email/phone above to track it. Totally optional.
+              Every drink counts toward your card — your 10th is on us. By checking this box, you consent to receive SMS text messages from Distinct. Coffee Co. at the phone number above, including order confirmations and loyalty updates. Message and data rates may apply. Message frequency varies. Reply STOP to opt out at any time, HELP for help. Consent is not a condition of purchase. Totally optional.
             </div>
           </label>
         </div>
@@ -367,7 +372,8 @@
 
     <!-- Live order loyalty card — contact info is entirely optional here
          since the customer is standing right in front of us and doesn't
-         need updates to know their order is ready. -->
+         need updates to know their order is ready. SMS consent language is
+         explicit here too, since phone is one of the two ways to opt in. -->
     <div id="loyalty-card" style="display:none;background:var(--off-white);border-radius:6px;padding:20px 22px;margin-bottom:18px;">
       <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">
         <input type="checkbox" id="loyalty-optin" onchange="toggleLoyaltyFields()"
@@ -375,7 +381,7 @@
         <label for="loyalty-optin" style="cursor:pointer;">
           <div style="font-size:14px;font-weight:600;margin-bottom:4px;">☕ Join Distinct. Rewards</div>
           <div style="font-size:12px;color:#777;line-height:1.6;">
-            Every drink counts toward your card — your 10th is on us. Get a text or email receipt too. Totally optional — happy to just make your drink either way.
+            Every drink counts toward your card — your 10th is on us. Totally optional — happy to just make your drink either way.
           </div>
         </label>
       </div>
@@ -385,9 +391,12 @@
           <label class="form-label">Email</label>
           <input type="email" class="form-input" id="loyalty-email" placeholder="you@example.com" />
         </div>
-        <div class="form-group" style="margin-bottom:0;">
+        <div class="form-group" style="margin-bottom:8px;">
           <label class="form-label">Phone</label>
           <input type="tel" class="form-input" id="loyalty-phone" placeholder="(555) 000-0000" />
+        </div>
+        <div style="font-size:10px;color:#999;line-height:1.6;">
+          If you provide a phone number, you consent to receive SMS text messages from Distinct. Coffee Co. at that number, including order confirmations and loyalty updates. Message and data rates may apply. Message frequency varies. Reply STOP to opt out at any time, HELP for help. Consent is not a condition of purchase.
         </div>
       </div>
     </div>
