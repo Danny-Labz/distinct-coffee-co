@@ -4,6 +4,15 @@
 // are built). Called from the same place the confirmation email fires, so
 // SMS and email always go out together, exactly once per real order.
 
+const SUPABASE_URL = 'https://qjsitqvfimwiuoojsoge.supabase.co';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+function normalizePhone(phone) {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -26,6 +35,25 @@ exports.handler = async (event) => {
     const digits = to.replace(/[^\d+]/g, '');
     if (digits.replace(/\D/g, '').length < 10) {
       return { statusCode: 200, body: JSON.stringify({ skipped: true, reason: 'invalid phone number' }) };
+    }
+
+    // Belt-and-suspenders: carrier-level STOP blocking happens regardless of
+    // this check, but we also honor our own opt-out record so this never
+    // even attempts a send to someone who's told us to stop.
+    try {
+      const normalized = normalizePhone(to);
+      const lookupRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/loyalty_members?phone=eq.${encodeURIComponent(normalized)}&select=sms_opted_out`,
+        { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
+      );
+      const matches = await lookupRes.json();
+      if (matches.length && matches[0].sms_opted_out) {
+        return { statusCode: 200, body: JSON.stringify({ skipped: true, reason: 'recipient opted out' }) };
+      }
+    } catch (lookupErr) {
+      console.warn('Opt-out lookup failed, proceeding with send:', lookupErr);
+      // Don't block a legitimate send over a lookup hiccup — carrier-level
+      // STOP enforcement is still the backstop either way.
     }
 
     // Assume US numbers if no country code was given
