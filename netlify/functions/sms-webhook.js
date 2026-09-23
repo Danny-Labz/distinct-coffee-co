@@ -56,7 +56,8 @@ exports.handler = async (event) => {
     };
 
     const STOP_KEYWORDS = ['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'];
-    const START_KEYWORDS = ['START', 'YES', 'UNSTOP'];
+    const START_KEYWORDS = ['START', 'UNSTOP'];
+    const YES_KEYWORDS = ['YES', '1'];
     const HELP_KEYWORDS = ['HELP', 'INFO'];
 
     if (STOP_KEYWORDS.includes(bodyText)) {
@@ -70,7 +71,7 @@ exports.handler = async (event) => {
         await fetch(`${SUPABASE_URL}/rest/v1/loyalty_members?phone=eq.${encodeURIComponent(phone)}`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify({ sms_opted_out: true }),
+          body: JSON.stringify({ sms_opted_out: true, sms_consented: false }),
         });
       }
       // Twilio auto-sends its own STOP confirmation for most number types,
@@ -88,7 +89,34 @@ exports.handler = async (event) => {
           body: JSON.stringify({ sms_opted_out: false }),
         });
       }
-      return twimlResponse('Distinct. Coffee Co: You are re-subscribed to order and loyalty texts. Reply STOP to opt out anytime.');
+      return twimlResponse('Distinct. Coffee Co: You are re-subscribed to order texts. Reply STOP to opt out anytime.');
+    }
+
+    if (YES_KEYWORDS.includes(bodyText)) {
+      // Consent specifically for non-transactional (loyalty) messages —
+      // order confirmations always send regardless of this flag, since
+      // those are transactional and tied to something the customer just did.
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/loyalty_members?phone=eq.${encodeURIComponent(phone)}`, { headers });
+      const members = await res.json();
+
+      if (members.length) {
+        await fetch(`${SUPABASE_URL}/rest/v1/loyalty_members?phone=eq.${encodeURIComponent(phone)}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ sms_consented: true, sms_opted_out: false }),
+        });
+      } else {
+        // Someone replied YES before ever checking the loyalty box on an
+        // order — create a bare record so their consent is captured and
+        // matched up automatically if they enroll properly later (same
+        // phone-based lookup process-loyalty.js already uses).
+        await fetch(`${SUPABASE_URL}/rest/v1/loyalty_members`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ phone, sms_consented: true, sms_opted_out: false }),
+        });
+      }
+      return twimlResponse('Distinct. Coffee Co: You\'re in! We\'ll text you about loyalty rewards. Reply STOP to opt out anytime.');
     }
 
     if (HELP_KEYWORDS.includes(bodyText)) {
