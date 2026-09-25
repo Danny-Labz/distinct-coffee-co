@@ -1194,6 +1194,13 @@
 
       <!-- ── LOYALTY PANEL ── -->
       <div class="panel" id="panel-loyalty">
+        <div style="background:var(--off-white);border-radius:6px;padding:16px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <div style="font-size:12px;font-weight:600;">☕ Drinks needed for a free reward:</div>
+          <input type="number" id="loyalty-punches-setting" min="1" style="width:70px;padding:8px 10px;font-family:'Montserrat',sans-serif;font-size:13px;border:1px solid var(--border);border-radius:4px;" />
+          <button class="refresh-btn" style="padding:8px 16px;font-size:9px;" onclick="saveLoyaltySettings()">Save</button>
+          <span id="loyalty-settings-msg" style="font-size:11px;color:var(--green);display:none;">Saved ✓</span>
+        </div>
+
         <div class="filter-bar">
           <input type="text" class="filter-input" id="loyalty-search" placeholder="Search by name, email, or phone..." oninput="debounceLoyaltySearch()" />
           <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="loadLoyaltyMembers()">↻ Refresh</button>
@@ -1518,7 +1525,7 @@
       loadEvents();
       loadReports();
       loadIngredients();
-      loadLoyaltyMembers();
+      loadLoyaltySettings().then(loadLoyaltyMembers);
     }
 
     function updateClock() {
@@ -3065,6 +3072,7 @@
 
     let allLoyaltyMembers = [];
     let loyaltySearchTimer = null;
+    let loyaltyPunchesNeeded = 10; // overwritten by loadLoyaltySettings() on init
 
     function debounceLoyaltySearch() {
       clearTimeout(loyaltySearchTimer);
@@ -3108,13 +3116,15 @@
       document.getElementById('loyalty-table').style.display = 'table';
       document.getElementById('loyalty-empty').style.display = 'none';
 
+      const needed = loyaltyPunchesNeeded || 10;
+
       document.getElementById('loyalty-body').innerHTML = allLoyaltyMembers.map(m => {
         const unredeemedCount = Math.max(0, m.rewards_earned - m.rewards_redeemed);
         const contact = [m.email, m.phone].filter(Boolean).join(' · ') || '—';
         const lastVisit = m.last_order_at
           ? new Date(m.last_order_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
           : '—';
-        const punchDots = Array.from({ length: 10 }, (_, i) =>
+        const punchDots = Array.from({ length: needed }, (_, i) =>
           `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px;background:${i < m.punch_count ? 'var(--black)' : 'var(--off-white)'};border:1px solid var(--border);"></span>`
         ).join('');
 
@@ -3122,7 +3132,7 @@
         <tr>
           <td class="td-name">${m.name || 'Unknown'}</td>
           <td class="td-small">${contact}</td>
-          <td>${punchDots} <span class="td-small">${m.punch_count}/10</span></td>
+          <td>${punchDots} <span class="td-small">${m.punch_count}/${needed}</span></td>
           <td>${m.total_drinks || 0}</td>
           <td>$${((m.total_spent_cents||0)/100).toFixed(2)}</td>
           <td>
@@ -3131,10 +3141,11 @@
               : `<span class="td-small">${m.rewards_earned || 0} earned</span>`}
           </td>
           <td class="td-small">${lastVisit}</td>
-          <td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
             ${unredeemedCount > 0
               ? `<button class="refresh-btn" style="padding:6px 12px;font-size:8px;" onclick="redeemLoyaltyReward('${m.id}')">Redeem</button>`
               : ''}
+            <button class="refresh-btn" style="padding:6px 12px;font-size:8px;background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="awardLoyaltyReward('${m.id}', '${(m.name||'this member').replace(/'/g,"\\'")}')">+ Award</button>
           </td>
         </tr>`;
       }).join('');
@@ -3152,6 +3163,58 @@
         loadLoyaltyMembers();
       } catch (e) {
         alert(`Could not redeem reward: ${e.message}`);
+      }
+    }
+
+    async function awardLoyaltyReward(memberId, memberName) {
+      // Manually grants a free-drink reward independent of punch count —
+      // for birthdays, service recovery, or any judgment call. Does not
+      // touch their punch progress toward the next natural reward.
+      if (!confirm(`Manually award a free drink reward to ${memberName}? This does not reset their punch count.`)) return;
+      try {
+        const res = await fetch('/.netlify/functions/admin-loyalty', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ member_id: memberId, action: 'award' }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        loadLoyaltyMembers();
+      } catch (e) {
+        alert(`Could not award reward: ${e.message}`);
+      }
+    }
+
+    async function loadLoyaltySettings() {
+      try {
+        const res = await fetch('/.netlify/functions/admin-loyalty?settings=1');
+        if (!res.ok) throw new Error(await res.text());
+        const settings = await res.json();
+        loyaltyPunchesNeeded = settings.punches_needed || 10;
+        document.getElementById('loyalty-punches-setting').value = loyaltyPunchesNeeded;
+      } catch (e) {
+        console.warn('Could not load loyalty settings:', e);
+        loyaltyPunchesNeeded = 10;
+        document.getElementById('loyalty-punches-setting').value = 10;
+      }
+    }
+
+    async function saveLoyaltySettings() {
+      const val = parseInt(document.getElementById('loyalty-punches-setting').value);
+      if (!val || val < 1) { alert('Please enter a valid number of drinks (1 or more).'); return; }
+      try {
+        const res = await fetch('/.netlify/functions/admin-loyalty', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ punches_needed: val }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        loyaltyPunchesNeeded = val;
+        const msg = document.getElementById('loyalty-settings-msg');
+        msg.style.display = 'inline';
+        setTimeout(() => { msg.style.display = 'none'; }, 2000);
+        renderLoyaltyMembers(); // refresh punch dot counts to match new threshold
+      } catch (e) {
+        alert(`Could not save setting: ${e.message}`);
       }
     }
 
