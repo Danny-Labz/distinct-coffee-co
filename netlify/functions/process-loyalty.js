@@ -7,7 +7,18 @@
 
 const SUPABASE_URL = 'https://qjsitqvfimwiuoojsoge.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const PUNCHES_PER_REWARD = 10;
+const DEFAULT_PUNCHES_PER_REWARD = 10; // fallback only, if loyalty_settings is ever missing
+
+async function getPunchesPerReward(headers) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/loyalty_settings?id=eq.1&select=punches_needed`, { headers });
+    const rows = await res.json();
+    if (rows.length && rows[0].punches_needed > 0) return rows[0].punches_needed;
+  } catch (e) {
+    console.warn('Could not load loyalty_settings, using default:', e);
+  }
+  return DEFAULT_PUNCHES_PER_REWARD;
+}
 
 function countDrinksInOrder(items) {
   if (!items) return 0;
@@ -57,6 +68,8 @@ exports.handler = async (event) => {
       'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
     };
 
+    const punchesPerReward = await getPunchesPerReward(headers);
+
     // Find existing member by whichever identifier was given — email first,
     // then phone, so a member found by either method is treated as the
     // same person on subsequent visits.
@@ -80,8 +93,8 @@ exports.handler = async (event) => {
       // of more than 1 drink correctly even if it crosses multiple rewards.
       let punches = existing.punch_count + drinkCount;
       let rewardsThisOrder = 0;
-      while (punches >= PUNCHES_PER_REWARD) {
-        punches -= PUNCHES_PER_REWARD;
+      while (punches >= punchesPerReward) {
+        punches -= punchesPerReward;
         rewardsThisOrder += 1;
       }
       newPunchCount = punches;
@@ -106,8 +119,8 @@ exports.handler = async (event) => {
       // First-time member — same rollover logic starting from zero
       let punches = drinkCount;
       let rewardsThisOrder = 0;
-      while (punches >= PUNCHES_PER_REWARD) {
-        punches -= PUNCHES_PER_REWARD;
+      while (punches >= punchesPerReward) {
+        punches -= punchesPerReward;
         rewardsThisOrder += 1;
       }
       newPunchCount = punches;
