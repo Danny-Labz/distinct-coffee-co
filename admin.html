@@ -2383,17 +2383,17 @@
       try {
         let res;
         if (editingAddonId) {
-          res = await fetch(`${SUPABASE_URL}/rest/v1/addons?id=eq.${editingAddonId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
-            body: JSON.stringify(payload),
+          res = await fetch('/.netlify/functions/admin-addons', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: editingAddonId, data: payload }),
           });
         } else {
           payload.sort_order = allAddons.filter(a => a.type === addonModalType).length + 1;
-          res = await fetch(`${SUPABASE_URL}/rest/v1/addons`, {
+          res = await fetch('/.netlify/functions/admin-addons', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
-            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: payload }),
           });
         }
         if (!res.ok) throw new Error(await res.text());
@@ -2409,9 +2409,10 @@
       if (!editingAddonId) return;
       if (!confirm('Delete this option? This cannot be undone.')) return;
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/addons?id=eq.${editingAddonId}`, {
+        const res = await fetch('/.netlify/functions/admin-addons', {
           method: 'DELETE',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingAddonId }),
         });
         if (!res.ok) throw new Error(await res.text());
         closeAddonModal();
