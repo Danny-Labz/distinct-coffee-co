@@ -1620,6 +1620,36 @@
       return res.ok;
     }
 
+    // Shared write helpers for menu_items / recipe_items / ingredients /
+    // events — these tables are RLS-protected with public read only, so
+    // writes must go through the service-role-key function instead of the
+    // anon key. Returns the raw fetch Response so callers can inspect
+    // res.ok / res.text() exactly like they did with the old direct calls.
+    async function adminCreateRow(table, data) {
+      return fetch('/.netlify/functions/admin-menu-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table, data }),
+      });
+    }
+    async function adminUpdateRow(table, id, data) {
+      return fetch('/.netlify/functions/admin-menu-data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table, id, data }),
+      });
+    }
+    async function adminDeleteRow(table, idOrFilter) {
+      const body = typeof idOrFilter === 'object'
+        ? { table, filter: idOrFilter.filter }
+        : { table, id: idOrFilter };
+      return fetch('/.netlify/functions/admin-menu-data', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    }
+
     // ─── ORDERS ──────────────────────────────────────────
     async function loadOrders() {
       document.getElementById('orders-loading').style.display = 'block';
@@ -2196,45 +2226,17 @@
       try {
         let res;
         if (editingEventId) {
-          res = await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${editingEventId}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Prefer': 'return=minimal',
-            },
-            body: JSON.stringify(payload),
-          });
+          res = await adminUpdateRow('events', editingEventId, payload);
         } else {
-          res = await fetch(`${SUPABASE_URL}/rest/v1/events`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Prefer': 'return=minimal',
-            },
-            body: JSON.stringify(payload),
-          });
+          res = await adminCreateRow('events', payload);
         }
 
         if (!res.ok) {
           // Retry without date_value in case that column doesn't exist
           delete payload.date_value;
-          const retryUrl = editingEventId
-            ? `${SUPABASE_URL}/rest/v1/events?id=eq.${editingEventId}`
-            : `${SUPABASE_URL}/rest/v1/events`;
-          const retry = await fetch(retryUrl, {
-            method: editingEventId ? 'PATCH' : 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-              'Prefer': 'return=minimal',
-            },
-            body: JSON.stringify(payload),
-          });
+          const retry = editingEventId
+            ? await adminUpdateRow('events', editingEventId, payload)
+            : await adminCreateRow('events', payload);
           if (!retry.ok) throw new Error(await retry.text());
         }
 
@@ -2252,13 +2254,7 @@
       if (!confirm('Delete this event? This cannot be undone.')) return;
 
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/events?id=eq.${editingEventId}`, {
-          method: 'DELETE',
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-        });
+        const res = await adminDeleteRow('events', editingEventId);
         if (!res.ok) throw new Error(await res.text());
         closeEventModal();
         loadEvents();
@@ -2491,17 +2487,9 @@
       try {
         let res;
         if (editingMenuItemId) {
-          res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items?id=eq.${editingMenuItemId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
-            body: JSON.stringify(payload),
-          });
+          res = await adminUpdateRow('menu_items', editingMenuItemId, payload);
         } else {
-          res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
-            body: JSON.stringify(payload),
-          });
+          res = await adminCreateRow('menu_items', payload);
         }
         if (!res.ok) throw new Error(await res.text());
         closeMenuItemModal();
@@ -2517,10 +2505,7 @@
       if (!confirm('Delete this menu item? This cannot be undone.')) return;
 
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items?id=eq.${editingMenuItemId}`, {
-          method: 'DELETE',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        });
+        const res = await adminDeleteRow('menu_items', editingMenuItemId);
         if (!res.ok) throw new Error(await res.text());
         closeMenuItemModal();
         loadInventory();
@@ -2785,18 +2770,10 @@
       try {
         let res;
         if (editingIngredientId) {
-          res = await fetch(`${SUPABASE_URL}/rest/v1/ingredients?id=eq.${editingIngredientId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
-            body: JSON.stringify(payload),
-          });
+          res = await adminUpdateRow('ingredients', editingIngredientId, payload);
         } else {
           payload.sort_order = allIngredients.length + 1;
-          res = await fetch(`${SUPABASE_URL}/rest/v1/ingredients`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
-            body: JSON.stringify(payload),
-          });
+          res = await adminCreateRow('ingredients', payload);
         }
         if (!res.ok) throw new Error(await res.text());
         closeIngredientModal();
@@ -2811,10 +2788,7 @@
       if (!editingIngredientId) return;
       if (!confirm('Delete this ingredient? Any recipes using it will lose that line item.')) return;
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/ingredients?id=eq.${editingIngredientId}`, {
-          method: 'DELETE',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        });
+        const res = await adminDeleteRow('ingredients', editingIngredientId);
         if (!res.ok) throw new Error(await res.text());
         closeIngredientModal();
         loadIngredients();
@@ -2895,11 +2869,7 @@
       }
 
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/recipe_items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ menu_item_id: itemId, ingredient_id: ingredientId, quantity: qty }),
-        });
+        const res = await adminCreateRow('recipe_items', { menu_item_id: itemId, ingredient_id: ingredientId, quantity: qty });
         if (!res.ok) throw new Error(await res.text());
 
         document.getElementById('recipe-add-ingredient-select').value = '';
@@ -2912,10 +2882,7 @@
 
     async function removeRecipeIngredient(recipeItemId) {
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/recipe_items?id=eq.${recipeItemId}`, {
-          method: 'DELETE',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        });
+        const res = await adminDeleteRow('recipe_items', recipeItemId);
         if (!res.ok) throw new Error(await res.text());
         loadRecipeForItem();
       } catch (e) {
@@ -3316,18 +3283,14 @@
             // New ingredients need a recipe unit + yield the admin will fill
             // in later — default to "each" / yield 1 so cost_cents is at
             // least sane (equal to purchase cost) until edited properly.
-            await fetch(`${SUPABASE_URL}/rest/v1/ingredients`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
-              body: JSON.stringify({
-                name,
-                purchase_unit: 'unit',
-                purchase_cost_cents: purchaseCostCents,
-                unit: 'each',
-                yield_quantity: 1,
-                cost_cents: purchaseCostCents,
-                sort_order: allIngredients.length + 1,
-              }),
+            await adminCreateRow('ingredients', {
+              name,
+              purchase_unit: 'unit',
+              purchase_cost_cents: purchaseCostCents,
+              unit: 'each',
+              yield_quantity: 1,
+              cost_cents: purchaseCostCents,
+              sort_order: allIngredients.length + 1,
             });
           } else {
             // Matched to an existing ingredient — update its purchase cost,
@@ -3338,13 +3301,9 @@
             const yieldQty = existing.yield_quantity || 1;
             const newCostCents = Math.round(purchaseCostCents / yieldQty);
 
-            await fetch(`${SUPABASE_URL}/rest/v1/ingredients?id=eq.${item.matchType}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'Prefer': 'return=minimal' },
-              body: JSON.stringify({
-                purchase_cost_cents: purchaseCostCents,
-                cost_cents: newCostCents,
-              }),
+            await adminUpdateRow('ingredients', item.matchType, {
+              purchase_cost_cents: purchaseCostCents,
+              cost_cents: newCostCents,
             });
           }
         }
