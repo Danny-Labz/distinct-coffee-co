@@ -431,10 +431,10 @@
       .refresh-btn { margin-left: 0; }
 
       /* Hide desktop tables on mobile — EXCEPT ones with no mobile card view */
-      .table-wrap table:not(#inventory-table):not(#milk-table):not(#syrup-table):not(#ingredients-table):not(#recipe-ingredients-table):not(#cost-drinks-table):not(#cost-supply-table):not(#loyalty-table) { display: none !important; }
+      .table-wrap table:not(#inventory-table):not(#milk-table):not(#syrup-table):not(#ingredients-table):not(#recipe-ingredients-table):not(#cost-drinks-table):not(#cost-supply-table):not(#loyalty-table):not(#shrink-table) { display: none !important; }
 
       /* These tables: keep visible but make them horizontally scrollable on mobile */
-      #inventory-table, #milk-table, #syrup-table, #ingredients-table, #recipe-ingredients-table, #cost-drinks-table, #cost-supply-table, #loyalty-table { display: table !important; font-size: 10px; }
+      #inventory-table, #milk-table, #syrup-table, #ingredients-table, #recipe-ingredients-table, #cost-drinks-table, #cost-supply-table, #loyalty-table, #shrink-table { display: table !important; font-size: 10px; }
       .table-wrap { overflow-x: auto; }
 
       /* Show mobile cards instead */
@@ -1049,6 +1049,7 @@
           <button class="refresh-btn" id="cost-subtab-dashboard" style="background:var(--black);color:var(--white);" onclick="switchCostSubtab('dashboard')">Event Dashboard</button>
           <button class="refresh-btn" id="cost-subtab-recipes" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="switchCostSubtab('recipes')">Recipes</button>
           <button class="refresh-btn" id="cost-subtab-ingredients" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="switchCostSubtab('ingredients')">Ingredients</button>
+          <button class="refresh-btn" id="cost-subtab-shrink" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="switchCostSubtab('shrink')">Shrink</button>
         </div>
 
         <!-- ═══ EVENT DASHBOARD SUB-TAB ═══ -->
@@ -1190,6 +1191,50 @@
           </div>
         </div>
 
+        <!-- ═══ SHRINK SUB-TAB ═══ -->
+        <div id="cost-sub-shrink" style="display:none;">
+          <div class="filter-bar">
+            <button class="refresh-btn" onclick="openShrinkModal()">+ Log Shrink</button>
+            <select class="filter-select" id="shrink-event-filter" onchange="loadShrinkLog()">
+              <option value="">All Events</option>
+            </select>
+            <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="loadShrinkLog()">↻ Refresh</button>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-card">
+              <div class="stat-card-label">Total Shrink Cost</div>
+              <div class="stat-card-value" id="shrink-total-cost">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-label">Drinks Logged</div>
+              <div class="stat-card-value" id="shrink-total-count">—</div>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="loading" id="shrink-loading">Loading shrink log...</div>
+            <table id="shrink-table" style="display:none;">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Drink</th>
+                  <th>Event</th>
+                  <th>Reason</th>
+                  <th>Cost</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="shrink-body"></tbody>
+            </table>
+            <div class="empty-state" id="shrink-empty" style="display:none;">
+              <div class="empty-state-icon">🗑️</div>
+              <div class="empty-state-text">No shrink logged yet</div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- ── LOYALTY PANEL ── -->
@@ -1302,6 +1347,52 @@
         <div style="flex:1;"></div>
         <button class="modal-btn-cancel" onclick="closeIngredientModal()">Cancel</button>
         <button class="modal-btn-save" onclick="saveIngredient()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOG SHRINK MODAL -->
+  <div id="shrink-modal-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>Log Shrink</span>
+        <button class="modal-close" onclick="closeShrinkModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="msg msg-error" id="shrink-modal-error"></div>
+        <div class="form-group">
+          <label class="form-label">Drink</label>
+          <select class="form-select" id="shrink-item-select" onchange="updateShrinkCostPreview()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Event (optional)</label>
+          <select class="form-select" id="shrink-event-select">
+            <option value="">Not tied to an event</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reason</label>
+          <select class="form-select" id="shrink-reason-select">
+            <option>Spilled</option>
+            <option>Wrong Order</option>
+            <option>Customer Complaint</option>
+            <option>Equipment Issue</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes (optional)</label>
+          <textarea class="form-textarea" id="shrink-notes-input" placeholder="Any extra detail..."></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Estimated Cost</label>
+          <div id="shrink-cost-preview" style="font-size:13px;font-weight:600;padding:10px 0;">$0.00</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div style="flex:1;"></div>
+        <button class="modal-btn-cancel" onclick="closeShrinkModal()">Cancel</button>
+        <button class="modal-btn-save" onclick="saveShrinkLog()">Log It</button>
       </div>
     </div>
   </div>
@@ -2638,7 +2729,7 @@
 
     // ─── SUB-TAB SWITCHING ─────────────────────────────────
     function switchCostSubtab(sub) {
-      ['dashboard','recipes','ingredients'].forEach(s => {
+      ['dashboard','recipes','ingredients','shrink'].forEach(s => {
         document.getElementById(`cost-sub-${s}`).style.display = s === sub ? 'block' : 'none';
         const btn = document.getElementById(`cost-subtab-${s}`);
         if (s === sub) {
@@ -2654,6 +2745,7 @@
 
       if (sub === 'recipes') populateRecipeItemSelect();
       if (sub === 'dashboard') populateCostEventSelect();
+      if (sub === 'shrink') { populateShrinkEventFilter(); loadShrinkLog(); }
     }
 
     // ─── INGREDIENTS CRUD ──────────────────────────────────
@@ -3420,6 +3512,176 @@
       } catch (e) {
         errorEl.textContent = `Could not apply changes: ${e.message}`;
         errorEl.style.display = 'block';
+      }
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    // SHRINK LOG — Costs > Shrink, also usable from Prep View
+    // ═══════════════════════════════════════════════════════
+
+    let allShrinkLog = [];
+
+    function populateShrinkEventFilter() {
+      const filterSel = document.getElementById('shrink-event-filter');
+      const current = filterSel.value;
+      filterSel.innerHTML = '<option value="">All Events</option>' +
+        allEvents.map(ev => `<option value="${ev.id}" ${ev.id===current?'selected':''}>${ev.name} — ${ev.date}</option>`).join('');
+    }
+
+    async function openShrinkModal() {
+      document.getElementById('shrink-modal-error').style.display = 'none';
+      document.getElementById('shrink-notes-input').value = '';
+      document.getElementById('shrink-reason-select').value = 'Spilled';
+
+      // Menu item dropdown, sorted the same way the menu displays
+      const itemSel = document.getElementById('shrink-item-select');
+      itemSel.innerHTML = allInventory.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+
+      // Event dropdown — optional, so today's/active events float to top
+      const evSel = document.getElementById('shrink-event-select');
+      evSel.innerHTML = '<option value="">Not tied to an event</option>' +
+        allEvents.map(ev => `<option value="${ev.id}">${ev.name} — ${ev.date}</option>`).join('');
+
+      // Make sure we have recipe + ingredient data to price the drink
+      if (!allIngredients.length) allIngredients = await supaFetch('ingredients?select=*');
+      if (!window._shrinkRecipeCache) window._shrinkRecipeCache = await supaFetch('recipe_items?select=*');
+
+      updateShrinkCostPreview();
+      document.getElementById('shrink-modal-overlay').style.display = 'flex';
+    }
+
+    function closeShrinkModal() {
+      document.getElementById('shrink-modal-overlay').style.display = 'none';
+    }
+
+    function updateShrinkCostPreview() {
+      const itemId = document.getElementById('shrink-item-select').value;
+      const recipe = (window._shrinkRecipeCache || []).filter(ri => ri.menu_item_id === itemId);
+      const ingredientMap = {};
+      allIngredients.forEach(i => ingredientMap[i.id] = i);
+
+      let cost = 0;
+      recipe.forEach(ri => {
+        const ing = ingredientMap[ri.ingredient_id];
+        if (!ing) return;
+        cost += ing.cost_cents * parseFloat(ri.quantity);
+      });
+
+      document.getElementById('shrink-cost-preview').textContent = `$${(cost/100).toFixed(2)}`;
+    }
+
+    async function saveShrinkLog() {
+      const errorEl = document.getElementById('shrink-modal-error');
+      errorEl.style.display = 'none';
+
+      const itemSel = document.getElementById('shrink-item-select');
+      const itemId = itemSel.value;
+      const itemName = itemSel.options[itemSel.selectedIndex]?.textContent || '';
+      const eventSel = document.getElementById('shrink-event-select');
+      const eventId = eventSel.value || null;
+      const eventName = eventId ? eventSel.options[eventSel.selectedIndex].textContent : null;
+      const reason = document.getElementById('shrink-reason-select').value;
+      const notes = document.getElementById('shrink-notes-input').value.trim();
+
+      if (!itemId) { errorEl.textContent = 'Please select a drink.'; errorEl.style.display = 'block'; return; }
+
+      // Recompute the cost fresh at save time (not just trust the preview text)
+      const recipe = (window._shrinkRecipeCache || []).filter(ri => ri.menu_item_id === itemId);
+      const ingredientMap = {};
+      allIngredients.forEach(i => ingredientMap[i.id] = i);
+      let costCents = 0;
+      recipe.forEach(ri => {
+        const ing = ingredientMap[ri.ingredient_id];
+        if (!ing) return;
+        costCents += ing.cost_cents * parseFloat(ri.quantity);
+      });
+
+      try {
+        const res = await fetch('/.netlify/functions/admin-shrink', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: {
+              menu_item_id: itemId,
+              menu_item_name: itemName,
+              event_id: eventId,
+              event_name: eventName,
+              reason,
+              cost_cents: costCents,
+              notes: notes || null,
+            },
+          }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        closeShrinkModal();
+        loadShrinkLog();
+      } catch (e) {
+        errorEl.textContent = `Could not log shrink: ${e.message}`;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    async function loadShrinkLog() {
+      document.getElementById('shrink-loading').style.display = 'block';
+      document.getElementById('shrink-table').style.display  = 'none';
+      document.getElementById('shrink-empty').style.display  = 'none';
+
+      try {
+        const eventId = document.getElementById('shrink-event-filter').value;
+        const qs = eventId ? `event_id=${eventId}` : '';
+        const res = await fetch(`/.netlify/functions/admin-shrink${qs ? '?' + qs : ''}`);
+        if (!res.ok) throw new Error(await res.text());
+        allShrinkLog = await res.json();
+        renderShrinkLog();
+      } catch (e) {
+        document.getElementById('shrink-loading').textContent = `Failed to load: ${e.message}`;
+      }
+    }
+
+    function renderShrinkLog() {
+      document.getElementById('shrink-loading').style.display = 'none';
+
+      const totalCost = allShrinkLog.reduce((sum, s) => sum + (s.cost_cents || 0), 0);
+      document.getElementById('shrink-total-cost').textContent = `$${(totalCost/100).toFixed(2)}`;
+      document.getElementById('shrink-total-count').textContent = allShrinkLog.length;
+
+      if (!allShrinkLog.length) {
+        document.getElementById('shrink-table').style.display = 'none';
+        document.getElementById('shrink-empty').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('shrink-table').style.display = 'table';
+      document.getElementById('shrink-empty').style.display = 'none';
+
+      document.getElementById('shrink-body').innerHTML = allShrinkLog.map(s => {
+        const date = s.created_at ? new Date(s.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
+        return `
+        <tr>
+          <td class="td-small">${date}</td>
+          <td class="td-name">${s.menu_item_name || '—'}</td>
+          <td class="td-small">${s.event_name || '—'}</td>
+          <td class="td-small">${s.reason || '—'}</td>
+          <td>$${((s.cost_cents||0)/100).toFixed(2)}</td>
+          <td class="td-small">${s.notes || ''}</td>
+          <td><button class="refresh-btn" style="padding:6px 12px;font-size:8px;background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="deleteShrinkEntry('${s.id}')">Remove</button></td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function deleteShrinkEntry(id) {
+      if (!confirm('Remove this shrink entry? This cannot be undone.')) return;
+      try {
+        const res = await fetch('/.netlify/functions/admin-shrink', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        loadShrinkLog();
+      } catch (e) {
+        alert(`Could not remove entry: ${e.message}`);
       }
     }
 
