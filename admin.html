@@ -1627,9 +1627,8 @@
       document.getElementById('orders-empty').style.display  = 'none';
       try {
         allOrders = await adminFetchOrders('order=created_at.desc');
-        updateOrderStats();
         populateEventFilter();
-        renderOrders();
+        renderOrders(); // also updates the stat cards
         renderReports(); // keep reports in sync whenever orders reload
       } catch(e) {
         document.getElementById('orders-loading').textContent = 'Failed to load orders.';
@@ -1637,13 +1636,29 @@
     }
 
     function updateOrderStats() {
-      const paid     = allOrders.filter(o => o.status === 'paid');
-      const reserved = allOrders.filter(o => o.status === 'reserved');
+      // Mirrors renderOrders' filtering exactly, so the stat cards always
+      // reflect whichever status/event/search filters are currently active
+      // rather than always showing totals across every order ever placed.
+      const statusFilter = document.getElementById('order-filter-status').value;
+      const eventFilter  = document.getElementById('order-filter-event').value;
+      const search       = document.getElementById('order-search').value.toLowerCase();
+
+      const filtered = allOrders.filter(o => {
+        if (statusFilter && o.status !== statusFilter) return false;
+        if (eventFilter  && o.event_name !== eventFilter) return false;
+        if (search && !`${o.customer_name} ${o.email}`.toLowerCase().includes(search)) return false;
+        return true;
+      });
+
+      const paid     = filtered.filter(o => o.status === 'paid');
+      const reserved = filtered.filter(o => o.status === 'reserved');
       const revenue  = paid.reduce((sum, o) => sum + (o.total_cents || 0), 0);
-      document.getElementById('stat-total').textContent    = allOrders.length;
+      document.getElementById('stat-total').textContent    = filtered.length;
       document.getElementById('stat-paid').textContent     = paid.length;
       document.getElementById('stat-reserved').textContent = reserved.length;
       document.getElementById('stat-revenue').textContent  = `$${(revenue/100).toFixed(2)}`;
+      // The tab badge stays a true total across all orders regardless of
+      // filters — that's a count of pending work, not a filtered stat.
       document.getElementById('badge-orders').textContent  = allOrders.length;
     }
 
@@ -1656,6 +1671,8 @@
     }
 
     function renderOrders() {
+      updateOrderStats(); // keep the stat cards in sync with whatever's filtered below
+
       const statusFilter = document.getElementById('order-filter-status').value;
       const eventFilter  = document.getElementById('order-filter-event').value;
       const search       = document.getElementById('order-search').value.toLowerCase();
