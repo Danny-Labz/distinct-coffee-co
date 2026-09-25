@@ -2930,45 +2930,87 @@
           recipesByItem[ri.menu_item_id].push(ri);
         });
 
-        // Tally drinks sold (by menu item id) and revenue
-        const drinkStats = {}; // menuItemId -> { name, qty, revenue }
+        // Cost is calculated PER INDIVIDUAL DRINK, not per menu item, because
+        // add-ons (extra shot, syrups) vary drink-to-drink even within the
+        // same item — two Lattes in the same order can have different costs
+        // if only one of them got a syrup. Aggregation into per-item rows
+        // happens after each drink's true cost (base recipe + its own
+        // add-ons) is computed.
+        const drinkStats = {}; // menuItemId -> { name, qty, revenue, cost, hasRecipe }
+        const supplyTotals = {}; // ingredientId -> total quantity needed
         let totalRevenue = 0;
+        let totalCost = 0;
+
+        // Add-on name -> ingredient match, same logic Prep View uses to
+        // show the adjusted recipe, so costing and prep stay consistent.
+        function findAddonIngredientCost(addonName) {
+          if (addonName === 'Extra Shot') {
+            const shot = ingredients.find(i => i.name === 'Espresso Shot');
+            return shot ? shot.cost_cents * 1 : 0;
+          }
+          if (addonName.includes('Syrup')) {
+            // Matches by exact name first (e.g. "Vanilla Syrup" ingredient),
+            // falling back to 0 if no ingredient with that name exists yet —
+            // better to undercount than to silently guess a wrong cost.
+            const syrup = ingredients.find(i => i.name === addonName);
+            return syrup ? syrup.cost_cents * 1 : 0;
+          }
+          return 0;
+        }
 
         orders.forEach(o => {
           totalRevenue += (o.total_cents || 0);
-          flattenOrderItems(o.items).forEach(item => {
-            const itemId = item.menuItemId;
-            if (!drinkStats[itemId]) drinkStats[itemId] = { name: item.name, qty: 0, revenue: 0 };
-            drinkStats[itemId].qty += item.qty || 0;
-            drinkStats[itemId].revenue += (item.price || 0) * (item.qty || 0);
+
+          flattenOrderItems(o.items).forEach(drink => {
+            const itemId = drink.menuItemId;
+            if (!drinkStats[itemId]) drinkStats[itemId] = { name: drink.name, qty: 0, revenue: 0, cost: 0, hasRecipe: (recipesByItem[itemId] || []).length > 0 };
+
+            const recipe = recipesByItem[itemId] || [];
+            let thisDrinkCost = 0;
+
+            // Base recipe cost for this one drink
+            recipe.forEach(ri => {
+              const ing = ingredientMap[ri.ingredient_id];
+              if (!ing) return;
+              const qtyPerDrink = parseFloat(ri.quantity);
+              thisDrinkCost += ing.cost_cents * qtyPerDrink;
+
+              if (!supplyTotals[ri.ingredient_id]) supplyTotals[ri.ingredient_id] = 0;
+              supplyTotals[ri.ingredient_id] += qtyPerDrink;
+            });
+
+            // Add-on cost for THIS specific drink only — this is the part
+            // that was previously missing entirely from cost calculations.
+            (drink.addons || []).forEach(addonName => {
+              thisDrinkCost += findAddonIngredientCost(addonName);
+
+              // Also reflect add-on ingredients in the supply list so
+              // shopping lists account for syrups/extra shots actually used.
+              if (addonName === 'Extra Shot') {
+                const shot = ingredients.find(i => i.name === 'Espresso Shot');
+                if (shot) {
+                  if (!supplyTotals[shot.id]) supplyTotals[shot.id] = 0;
+                  supplyTotals[shot.id] += 1;
+                }
+              } else if (addonName.includes('Syrup')) {
+                const syrup = ingredients.find(i => i.name === addonName);
+                if (syrup) {
+                  if (!supplyTotals[syrup.id]) supplyTotals[syrup.id] = 0;
+                  supplyTotals[syrup.id] += 1;
+                }
+              }
+            });
+
+            drinkStats[itemId].qty += drink.qty || 1;
+            drinkStats[itemId].revenue += drink.price || 0;
+            drinkStats[itemId].cost += thisDrinkCost;
+            totalCost += thisDrinkCost;
           });
         });
 
-        // Calculate cost per drink from recipes, and aggregate supply list
-        const supplyTotals = {}; // ingredientId -> total quantity needed
-        let totalCost = 0;
-
         const drinkRows = Object.entries(drinkStats).map(([itemId, stats]) => {
-          const recipe = recipesByItem[itemId] || [];
-          let costPerDrink = 0;
-
-          recipe.forEach(ri => {
-            const ing = ingredientMap[ri.ingredient_id];
-            if (!ing) return;
-            const qtyPerDrink = parseFloat(ri.quantity);
-            costPerDrink += ing.cost_cents * qtyPerDrink;
-
-            // Add to supply totals
-            const totalQtyNeeded = qtyPerDrink * stats.qty;
-            if (!supplyTotals[ri.ingredient_id]) supplyTotals[ri.ingredient_id] = 0;
-            supplyTotals[ri.ingredient_id] += totalQtyNeeded;
-          });
-
-          const lineCost = costPerDrink * stats.qty;
-          totalCost += lineCost;
-          const profit = stats.revenue - lineCost;
-
-          return { name: stats.name, qty: stats.qty, revenue: stats.revenue, cost: lineCost, profit, hasRecipe: recipe.length > 0 };
+          const profit = stats.revenue - stats.cost;
+          return { name: stats.name, qty: stats.qty, revenue: stats.revenue, cost: stats.cost, profit, hasRecipe: stats.hasRecipe };
         }).sort((a,b) => b.revenue - a.revenue);
 
         // Render stats
