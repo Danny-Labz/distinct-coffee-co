@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Counter — Distinct. Coffee Co.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --black: #0a0a0a;
+      --white: #f8f6f2;
+      --off-white: #eeebe5;
+      --mid: #c8c3bb;
+      --green: #2e7d32;
+      --green-bg: #e8f5e9;
+    }
+    body {
+      background: var(--white);
+      color: var(--black);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 400;
+      min-height: 100vh;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--black);
+      color: var(--white);
+      padding: 14px 18px;
+      padding-top: calc(14px + env(safe-area-inset-top, 0px));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topbar-title { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+    .topbar-event { font-size: 10px; opacity: 0.5; }
+
+    main { max-width: 900px; margin: 0 auto; padding: 16px 14px 220px; }
+
+    /* MENU GRID */
+    .cat-label {
+      font-size: 10px; font-weight: 800; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--mid);
+      margin: 18px 4px 10px;
+    }
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    @media (min-width: 600px) {
+      .menu-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    .menu-tile {
+      background: var(--off-white);
+      border-radius: 10px;
+      padding: 16px 14px;
+      cursor: pointer;
+      border: none;
+      text-align: left;
+      font-family: 'Montserrat', sans-serif;
+      transition: transform 0.08s, background 0.08s;
+      position: relative;
+    }
+    .menu-tile:active { transform: scale(0.96); background: var(--mid); }
+    .menu-tile-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; line-height: 1.2; }
+    .menu-tile-price { font-size: 13px; font-weight: 600; color: #555; }
+    .menu-tile-badge {
+      position: absolute; top: 8px; right: 8px;
+      background: var(--black); color: var(--white);
+      font-size: 11px; font-weight: 800;
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      display: none;
+    }
+
+    /* CONFIG DRAWER (slides up when a drink was just added) */
+    .config-drawer {
+      display: none;
+      background: var(--black);
+      color: var(--white);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 16px 4px;
+      animation: slideUp 0.2s ease;
+    }
+    .config-drawer.open { display: block; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .config-drawer-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+    .config-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(248,246,242,0.5); margin: 10px 0 6px; }
+    .config-label:first-of-type { margin-top: 0; }
+    .config-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .config-chip {
+      font-size: 11px; font-weight: 600; padding: 8px 13px;
+      border-radius: 16px; border: 1.5px solid rgba(248,246,242,0.25);
+      background: transparent; color: var(--white);
+      cursor: pointer; font-family: 'Montserrat', sans-serif;
+    }
+    .config-chip.active { background: var(--white); color: var(--black); border-color: var(--white); }
+    .config-drawer-done {
+      width: 100%; margin-top: 14px; padding: 12px;
+      background: var(--green); color: white; border: none;
+      border-radius: 8px; font-family: 'Montserrat', sans-serif;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.5px; cursor: pointer;
+    }
+
+    /* BOTTOM CART BAR */
+    .cart-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--black);
+      padding: 14px 16px;
+      padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      z-index: 60;
+    }
+    .cart-summary {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px; cursor: pointer;
+    }
+    .cart-summary-left { display: flex; align-items: center; gap: 10px; }
+    .cart-count {
+      background: rgba(248,246,242,0.15); color: white;
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800;
+    }
+    .cart-label { color: rgba(248,246,242,0.6); font-size: 12px; }
+    .cart-total { color: white; font-size: 19px; font-weight: 800; }
+    .cart-arrow { color: rgba(248,246,242,0.4); font-size: 11px; margin-left: 6px; }
+    .cart-actions { display: flex; gap: 8px; }
+    .btn-clear {
+      padding: 15px; background: rgba(248,246,242,0.1); color: white;
+      border: none; border-radius: 8px; font-family: 'Montserrat', sans-serif;
+      font-size: 11px; font-weight: 700; cursor: pointer; width: 76px;
+    }
+    .btn-charge {
+      flex: 1; padding: 15px; background: var(--green); color: white;
+      border: none; border-radius: 8px; font-family: 'Montserrat', sans-serif;
+      font-size: 13px; font-weight: 800; letter-spacing: 0.5px; cursor: pointer;
+    }
+    .btn-charge:disabled { opacity: 0.4; }
+
+    /* CART REVIEW OVERLAY */
+    .review-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: var(--white);
+      z-index: 100;
+      flex-direction: column;
+    }
+    .review-overlay.open { display: flex; }
+    .review-topbar {
+      background: var(--black); color: white;
+      padding: 14px 18px; padding-top: calc(14px + env(safe-area-inset-top, 0px));
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .review-close { background: none; border: none; color: white; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .review-list { flex: 1; overflow-y: auto; padding: 16px; }
+    .review-card {
+      background: var(--off-white); border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .review-card-info { flex: 1; }
+    .review-card-name { font-size: 14px; font-weight: 700; }
+    .review-card-config { font-size: 11px; color: #777; margin-top: 2px; }
+    .review-card-price { font-size: 14px; font-weight: 700; }
+    .review-card-remove {
+      background: none; border: none; color: #c00; font-size: 20px;
+      cursor: pointer; padding: 4px 8px; line-height: 1;
+    }
+
+    /* PAYMENT PROCESSING */
+    .processing-msg {
+      display: none; text-align: center; padding: 16px;
+      font-size: 11px; color: var(--mid); letter-spacing: 1px;
+    }
+    .error-msg {
+      display: none; background: #fff0f0; border: 1px solid #ffcccc;
+      color: #cc0000; padding: 12px 16px; border-radius: 8px;
+      font-size: 12px; margin: 0 14px 12px; line-height: 1.6;
+    }
+
+    .empty-note { text-align: center; padding: 40px 20px; color: var(--mid); font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">☕ Counter Mode</div>
+  <div class="topbar-event" id="topbar-event">Loading event...</div>
+</div>
+
+<main>
+  <div class="error-msg" id="error-msg"></div>
+  <div id="menu-container">
+    <div class="empty-note">Loading menu...</div>
+  </div>
+
+  <!-- Config drawer appears right after adding a drink -->
+  <div class="config-drawer" id="config-drawer"></div>
+</main>
+
+<!-- CART BAR -->
+<div class="cart-bar">
+  <div class="cart-summary" onclick="openReview()">
+    <div class="cart-summary-left">
+      <div class="cart-count" id="cart-count">0</div>
+      <div class="cart-label">drinks · tap to review<span class="cart-arrow">↑</span></div>
+    </div>
+    <div class="cart-total" id="cart-total">$0.00</div>
+  </div>
+  <div class="cart-actions">
+    <button class="btn-clear" onclick="clearCart()">Clear</button>
+    <button class="btn-charge" id="charge-btn" onclick="chargeOrder()" disabled>Charge Card →</button>
+  </div>
+  <div class="processing-msg" id="processing-msg">Processing...</div>
+</div>
+
+<!-- REVIEW OVERLAY -->
+<div class="review-overlay" id="review-overlay">
+  <div class="review-topbar">
+    <span style="font-size:13px;font-weight:700;">Review Order</span>
+    <button class="review-close" onclick="closeReview()">Done ✓</button>
+  </div>
+  <div class="review-list" id="review-list"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qjsitqvfimwiuoojsoge.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_edpOH0H5-T6E1A5NOjOcnw_ikl5TzTv';
+
+// ── STATE ────────────────────────────────────
+let drinks = [];
+let drinkUidCounter = 0;
+let milkOptions = [];
+let addonOptions = [];
+let activeEvent = null;
+let configuringUid = null; // which drink the drawer is currently editing
+
+window.addEventListener('load', async () => {
+  await Promise.allSettled([loadMenu(), loadAddons(), loadEvent()]);
+  handleStripeReturn();
+});
+
+// ── HANDLE RETURN FROM STRIPE ────────────────────
+// Counter Mode sends operators back to this same page after payment
+// (via return_path in create-checkout.js) instead of the customer-facing
+// confirmation screen, so the cart can reset immediately for the next sale.
+function handleStripeReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const errorEl = document.getElementById('error-msg');
+
+  if (params.get('paid') === '1') {
+    errorEl.style.background = '#e8f5e9';
+    errorEl.style.borderColor = '#a5d6a7';
+    errorEl.style.color = '#1b5e20';
+    errorEl.textContent = '✓ Payment received — ready for the next order.';
+    errorEl.style.display = 'block';
+    setTimeout(() => { errorEl.style.display = 'none'; }, 4000);
+  } else if (params.get('cancelled') === '1') {
+    errorEl.style.background = '#fff0f0';
+    errorEl.style.borderColor = '#ffcccc';
+    errorEl.style.color = '#cc0000';
+    errorEl.textContent = 'Payment was cancelled — the order was not charged. Cart has been cleared, feel free to re-ring it.';
+    errorEl.style.display = 'block';
+  }
+
+  // Clean the URL so refreshing doesn't re-trigger this message
+  if (params.has('paid') || params.has('cancelled') || params.has('order_id') || params.has('session_id')) {
+    window.history.replaceState({}, '', 'counter.html');
+  }
+
+  // Cart was already implicitly "spent" on the previous order — always
+  // start fresh when landing back here, whether paid or cancelled.
+  drinks = [];
+  configuringUid = null;
+  document.querySelectorAll('.menu-tile-badge').forEach(b => { b.style.display = 'none'; b.textContent = '0'; });
+  updateCartBar();
+}
+
+async function sbFetch(path) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
+}
+
+// ── LOAD MENU ──────────────────────────────────
+async function loadMenu() {
+  try {
+    const items = await sbFetch('menu_items?is_available=eq.true&order=category.asc,sort_order.asc');
+    if (!items.length) {
+      document.getElementById('menu-container').innerHTML = '<div class="empty-note">Menu unavailable right now.</div>';
+      return;
+    }
+    const cats = {};
+    items.forEach(i => { if (!cats[i.category]) cats[i.category] = []; cats[i.category].push(i); });
+
+    document.getElementById('menu-container').innerHTML = Object.entries(cats).map(([cat, catItems]) => `
+      <div class="cat-label">${cat}</div>
+      <div class="menu-grid">
+        ${catItems.map(item => `
+          <button class="menu-tile" data-id="${item.id}" data-name="${item.name}" data-price="${item.price_cents}" data-category="${item.category}" onclick="addDrink('${item.id}')">
+            <span class="menu-tile-badge" id="count-${item.id}">0</span>
+            <div class="menu-tile-name">${item.name}</div>
+            <div class="menu-tile-price">$${(item.price_cents/100).toFixed(2)}</div>
+          </button>`).join('')}
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('menu-container').innerHTML = `<div class="empty-note" style="color:#c00;">Could not load menu. Please refresh.</div>`;
+  }
+}
+
+// ── LOAD ADD-ONS & MILK ─────────────────────────
+async function loadAddons() {
+  try {
+    const items = await sbFetch('addons?is_available=eq.true&order=type.asc,sort_order.asc');
+    milkOptions  = items.filter(a => a.type === 'milk');
+    addonOptions = items.filter(a => a.type === 'syrup');
+  } catch(e) {
+    milkOptions = [];
+    addonOptions = [];
+  }
+}
+
+// ── LOAD EVENT (context only — counter orders are always ASAP/in-person) ──
+async function loadEvent() {
+  try {
+    const events = await sbFetch('events?is_active=eq.true&order=created_at.desc&limit=1');
+    activeEvent = events.length ? events[0] : null;
+    document.getElementById('topbar-event').textContent = activeEvent ? activeEvent.name : 'No active event';
+  } catch(e) {
+    document.getElementById('topbar-event').textContent = '—';
+  }
+}
+
+// ── ADD A DRINK — immediately opens the config drawer for fast adjustment ──
+function addDrink(menuItemId) {
+  const tile = document.querySelector(`.menu-tile[data-id="${menuItemId}"]`);
+  if (!tile) return;
+
+  const name     = tile.dataset.name;
+  const price    = parseInt(tile.dataset.price);
+  const category = tile.dataset.category || '';
+
+  drinkUidCounter += 1;
+  const drink = {
+    uid: drinkUidCounter,
+    menuItemId,
+    name,
+    price,
+    category,
+    label: `Drink ${drinks.length + 1}`,
+    milk: milkOptions.length ? milkOptions[0].name : '',
+    addons: [],
+  };
+  drinks.push(drink);
+
+  updateBadge(menuItemId);
+  updateCartBar();
+  openConfigDrawer(drink.uid);
+}
+
+function updateBadge(menuItemId) {
+  const count = drinks.filter(d => d.menuItemId === menuItemId).length;
+  const badge = document.getElementById(`count-${menuItemId}`);
+  if (!badge) return;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'flex' : 'none';
+}
+
+// ── CONFIG DRAWER — quick milk/addon adjustment right after adding ──
+function openConfigDrawer(uid) {
+  configuringUid = uid;
+  renderConfigDrawer();
+  document.getElementById('config-drawer').classList.add('open');
+  requestAnimationFrame(() => {
+    document.getElementById('config-drawer').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+function closeConfigDrawer() {
+  configuringUid = null;
+  document.getElementById('config-drawer').classList.remove('open');
+}
+
+function renderConfigDrawer() {
+  const drink = drinks.find(d => d.uid === configuringUid);
+  const drawer = document.getElementById('config-drawer');
+  if (!drink) { drawer.classList.remove('open'); return; }
+
+  const milkChips = milkOptions.length ? `
+    <div class="config-label">Milk</div>
+    <div class="config-chips">
+      ${milkOptions.map(m => `<button class="config-chip ${drink.milk===m.name?'active':''}" onclick="setDrinkMilk(${drink.uid},'${m.name.replace(/'/g,"\\'")}')">${m.name}</button>`).join('')}
+    </div>` : '';
+
+  const addonChips = addonOptions.length ? `
+    <div class="config-label">Add-ons</div>
+    <div class="config-chips">
+      ${addonOptions.map(a => {
+        const active = drink.addons.includes(a.name);
+        const priceLabel = a.price_cents ? ` +$${(a.price_cents/100).toFixed(2)}` : '';
+        return `<button class="config-chip ${active?'active':''}" onclick="toggleDrinkAddon(${drink.uid},'${a.name.replace(/'/g,"\\'")}')">${a.name}${priceLabel}</button>`;
+      }).join('')}
+    </div>` : '';
+
+  drawer.innerHTML = `
+    <div class="config-drawer-title">${drink.name} — ${drink.label}</div>
+    ${milkChips}
+    ${addonChips}
+    <button class="config-drawer-done" onclick="closeConfigDrawer()">Done — Add Next Drink</button>
+  `;
+}
+
+function setDrinkMilk(uid, milkName) {
+  const d = drinks.find(x => x.uid === uid);
+  if (d) { d.milk = milkName; renderConfigDrawer(); }
+}
+
+function toggleDrinkAddon(uid, addonName) {
+  const d = drinks.find(x => x.uid === uid);
+  if (!d) return;
+  if (d.addons.includes(addonName)) d.addons = d.addons.filter(a => a !== addonName);
+  else d.addons.push(addonName);
+  renderConfigDrawer();
+  updateCartBar();
+}
+
+// ── CART BAR ─────────────────────────────────────
+function calcTotalCents() {
+  return drinks.reduce((sum, d) => {
+    let line = d.price;
+    d.addons.forEach(addonName => {
+      const opt = addonOptions.find(a => a.name === addonName);
+      if (opt) line += opt.price_cents;
+    });
+    return sum + line;
+  }, 0);
+}
+
+function updateCartBar() {
+  const total = calcTotalCents();
+  document.getElementById('cart-count').textContent = drinks.length;
+  document.getElementById('cart-total').textContent = `$${(total/100).toFixed(2)}`;
+  document.getElementById('charge-btn').disabled = drinks.length === 0;
+}
+
+function clearCart() {
+  if (!drinks.length) return;
+  if (!confirm('Clear the whole order?')) return;
+  drinks = [];
+  configuringUid = null;
+  document.querySelectorAll('.menu-tile-badge').forEach(b => { b.style.display = 'none'; b.textContent = '0'; });
+  document.getElementById('config-drawer').classList.remove('open');
+  updateCartBar();
+}
+
+function removeDrink(uid) {
+  const drink = drinks.find(d => d.uid === uid);
+  if (!drink) return;
+  drinks = drinks.filter(d => d.uid !== uid);
+  updateBadge(drink.menuItemId);
+  if (configuringUid === uid) closeConfigDrawer();
+  updateCartBar();
+  renderReview();
+}
+
+// ── REVIEW OVERLAY ───────────────────────────────
+function openReview() {
+  if (!drinks.length) return;
+  renderReview();
+  document.getElementById('review-overlay').classList.add('open');
+}
+function closeReview() {
+  document.getElementById('review-overlay').classList.remove('open');
+}
+function renderReview() {
+  document.getElementById('review-list').innerHTML = drinks.map(d => {
+    const extras = [d.milk, ...d.addons].filter(Boolean).join(', ');
+    let line = d.price;
+    d.addons.forEach(a => { const opt = addonOptions.find(o=>o.name===a); if (opt) line += opt.price_cents; });
+    return `
+      <div class="review-card">
+        <div class="review-card-info">
+          <div class="review-card-name">${d.label} — ${d.name}</div>
+          ${extras ? `<div class="review-card-config">${extras}</div>` : ''}
+        </div>
+        <div class="review-card-price">$${(line/100).toFixed(2)}</div>
+        <button class="review-card-remove" onclick="removeDrink(${d.uid})">×</button>
+      </div>`;
+  }).join('');
+}
+
+// ── BUILD items PAYLOAD (same shape as order.html) ──
+function buildItemsPayload() {
+  const grouped = {};
+  drinks.forEach(d => {
+    if (!grouped[d.menuItemId]) grouped[d.menuItemId] = [];
+    grouped[d.menuItemId].push({ name: d.name, price: d.price, label: d.label, milk: d.milk, addons: d.addons });
+  });
+  return grouped;
+}
+
+// ── CHARGE — creates the order then redirects straight to Stripe Checkout ──
+async function chargeOrder() {
+  const errorEl = document.getElementById('error-msg');
+  const btn = document.getElementById('charge-btn');
+  const processingEl = document.getElementById('processing-msg');
+  errorEl.style.display = 'none';
+
+  if (!drinks.length) return;
+
+  btn.disabled = true;
+  processingEl.style.display = 'block';
+  processingEl.textContent = 'Saving order...';
+
+  const totalCents = calcTotalCents();
+  const pin = String((parseInt(crypto.randomUUID().replace(/-/g,'').slice(0,8), 16) % 9000) + 1000);
+
+  const uniqueMilks = [...new Set(drinks.map(d => d.milk).filter(Boolean))];
+  const milkSummary = uniqueMilks.length > 1 ? 'Mixed' : (uniqueMilks[0] || '—');
+  const hasHot  = drinks.some(d => (d.category || '').toLowerCase().includes('espresso'));
+  const hasCold = drinks.some(d => (d.category || '').toLowerCase().includes('cold'));
+  const tempSummary = hasHot && hasCold ? 'Mixed (Hot & Iced)' : hasCold ? 'Iced' : hasHot ? 'Hot' : '—';
+  const allAddonsFlat = [...new Set(drinks.flatMap(d => d.addons))];
+
+  // Counter Mode orders are always in-person, always Pay Now, always
+  // anonymous unless you choose to type in a name — no customer contact
+  // fields to slow the line down.
+  const orderData = {
+    event_id:       activeEvent ? activeEvent.id : '00000000-0000-0000-0000-000000000000',
+    event_name:     activeEvent ? activeEvent.name : 'Counter Sale',
+    event_date:     activeEvent ? activeEvent.date : 'ASAP — In-Person Order',
+    customer_name:  'Counter Sale',
+    email:          '',
+    phone:          '',
+    pickup_time:    'ASAP — In-Person Order',
+    milk_pref:      milkSummary,
+    temp_pref:      tempSummary,
+    addons:         allAddonsFlat,
+    items:          buildItemsPayload(),
+    total_cents:    totalCents,
+    status:         'pending',
+    payment_method: 'pay_now',
+    pickup_pin:     pin,
+    loyalty_optin:  false,
+    notes:          'Placed via Counter Mode',
+  };
+
+  try {
+    const r = await fetch('/.netlify/functions/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
+    });
+    if (!r.ok) throw new Error(`Save failed: ${await r.text()}`);
+    const saved = await r.json();
+    const orderId = Array.isArray(saved) ? saved[0].id : saved.id;
+
+    processingEl.textContent = 'Opening payment...';
+
+    const sr = await fetch('/.netlify/functions/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: orderId, items: orderData.items, customer_email: '', event_name: orderData.event_name, return_path: 'counter.html' }),
+    });
+    if (!sr.ok) throw new Error(`Checkout failed: ${await sr.text()}`);
+    const { url, session_id } = await sr.json();
+
+    if (session_id) {
+      await fetch('/.netlify/functions/save-stripe-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, session_id }),
+      });
+    }
+
+    // return_path above tells create-checkout.js to send the operator back
+    // here (not the customer-facing confirmation.html) once payment
+    // completes, landing on ?paid=1 so we can show a quick success state
+    // and reset for the next sale.
+    window.location.href = url;
+
+  } catch(e) {
+    errorEl.textContent = e.message || 'Something went wrong. Please try again.';
+    errorEl.style.display = 'block';
+    btn.disabled = false;
+    processingEl.style.display = 'none';
+  }
+}
+</script>
+</body>
+</html>
