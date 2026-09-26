@@ -218,7 +218,7 @@
   </div>
   <div class="cart-actions">
     <button class="btn-clear" onclick="clearCart()">Clear</button>
-    <button class="btn-charge" id="charge-btn" onclick="chargeOrder()" disabled>Charge Card →</button>
+    <button class="btn-charge" id="charge-btn" onclick="logOrder()" disabled>Log Order ✓</button>
   </div>
   <div class="processing-msg" id="processing-msg">Processing...</div>
 </div>
@@ -246,44 +246,7 @@ let configuringUid = null; // which drink the drawer is currently editing
 
 window.addEventListener('load', async () => {
   await Promise.allSettled([loadMenu(), loadAddons(), loadEvent()]);
-  handleStripeReturn();
 });
-
-// ── HANDLE RETURN FROM STRIPE ────────────────────
-// Counter Mode sends operators back to this same page after payment
-// (via return_path in create-checkout.js) instead of the customer-facing
-// confirmation screen, so the cart can reset immediately for the next sale.
-function handleStripeReturn() {
-  const params = new URLSearchParams(window.location.search);
-  const errorEl = document.getElementById('error-msg');
-
-  if (params.get('paid') === '1') {
-    errorEl.style.background = '#e8f5e9';
-    errorEl.style.borderColor = '#a5d6a7';
-    errorEl.style.color = '#1b5e20';
-    errorEl.textContent = '✓ Payment received — ready for the next order.';
-    errorEl.style.display = 'block';
-    setTimeout(() => { errorEl.style.display = 'none'; }, 4000);
-  } else if (params.get('cancelled') === '1') {
-    errorEl.style.background = '#fff0f0';
-    errorEl.style.borderColor = '#ffcccc';
-    errorEl.style.color = '#cc0000';
-    errorEl.textContent = 'Payment was cancelled — the order was not charged. Cart has been cleared, feel free to re-ring it.';
-    errorEl.style.display = 'block';
-  }
-
-  // Clean the URL so refreshing doesn't re-trigger this message
-  if (params.has('paid') || params.has('cancelled') || params.has('order_id') || params.has('session_id')) {
-    window.history.replaceState({}, '', 'counter.html');
-  }
-
-  // Cart was already implicitly "spent" on the previous order — always
-  // start fresh when landing back here, whether paid or cancelled.
-  drinks = [];
-  configuringUid = null;
-  document.querySelectorAll('.menu-tile-badge').forEach(b => { b.style.display = 'none'; b.textContent = '0'; });
-  updateCartBar();
-}
 
 async function sbFetch(path) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -510,8 +473,9 @@ function buildItemsPayload() {
   return grouped;
 }
 
-// ── CHARGE — creates the order then redirects straight to Stripe Checkout ──
-async function chargeOrder() {
+// ── LOG ORDER — saves the order as paid immediately; payment itself is
+// collected separately in the Stripe Dashboard app, not through this page ──
+async function logOrder() {
   const errorEl = document.getElementById('error-msg');
   const btn = document.getElementById('charge-btn');
   const processingEl = document.getElementById('processing-msg');
@@ -521,7 +485,7 @@ async function chargeOrder() {
 
   btn.disabled = true;
   processingEl.style.display = 'block';
-  processingEl.textContent = 'Saving order...';
+  processingEl.textContent = 'Logging order...';
 
   const totalCents = calcTotalCents();
   const pin = String((parseInt(crypto.randomUUID().replace(/-/g,'').slice(0,8), 16) % 9000) + 1000);
@@ -533,9 +497,12 @@ async function chargeOrder() {
   const tempSummary = hasHot && hasCold ? 'Mixed (Hot & Iced)' : hasCold ? 'Iced' : hasHot ? 'Hot' : '—';
   const allAddonsFlat = [...new Set(drinks.flatMap(d => d.addons))];
 
-  // Counter Mode orders are always in-person, always Pay Now, always
-  // anonymous unless you choose to type in a name — no customer contact
-  // fields to slow the line down.
+  // Counter Mode logs the order as already paid — payment itself was
+  // collected separately in the Stripe Dashboard app, same as before this
+  // page existed. This just gets the sale into the system (menu counts,
+  // costs, loyalty, Prep View, Reports) without re-entering it anywhere.
+  // Status is editable afterward in Admin if a charge is later voided or
+  // refunded.
   const orderData = {
     event_id:       activeEvent ? activeEvent.id : '00000000-0000-0000-0000-000000000000',
     event_name:     activeEvent ? activeEvent.name : 'Counter Sale',
@@ -549,11 +516,11 @@ async function chargeOrder() {
     addons:         allAddonsFlat,
     items:          buildItemsPayload(),
     total_cents:    totalCents,
-    status:         'pending',
+    status:         'paid',
     payment_method: 'pay_now',
     pickup_pin:     pin,
     loyalty_optin:  false,
-    notes:          'Placed via Counter Mode',
+    notes:          'Placed via Counter Mode — payment collected separately in Stripe.',
   };
 
   try {
@@ -563,37 +530,29 @@ async function chargeOrder() {
       body: JSON.stringify(orderData),
     });
     if (!r.ok) throw new Error(`Save failed: ${await r.text()}`);
-    const saved = await r.json();
-    const orderId = Array.isArray(saved) ? saved[0].id : saved.id;
 
-    processingEl.textContent = 'Opening payment...';
+    // Success — reset the cart immediately and show a quick confirmation,
+    // no page navigation, ready for the very next order right away.
+    drinks = [];
+    configuringUid = null;
+    document.querySelectorAll('.menu-tile-badge').forEach(b => { b.style.display = 'none'; b.textContent = '0'; });
+    updateCartBar();
 
-    const sr = await fetch('/.netlify/functions/create-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_id: orderId, items: orderData.items, customer_email: '', event_name: orderData.event_name, return_path: 'counter.html' }),
-    });
-    if (!sr.ok) throw new Error(`Checkout failed: ${await sr.text()}`);
-    const { url, session_id } = await sr.json();
-
-    if (session_id) {
-      await fetch('/.netlify/functions/save-stripe-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: orderId, session_id }),
-      });
-    }
-
-    // return_path above tells create-checkout.js to send the operator back
-    // here (not the customer-facing confirmation.html) once payment
-    // completes, landing on ?paid=1 so we can show a quick success state
-    // and reset for the next sale.
-    window.location.href = url;
+    errorEl.style.background = '#e8f5e9';
+    errorEl.style.borderColor = '#a5d6a7';
+    errorEl.style.color = '#1b5e20';
+    errorEl.textContent = `✓ Order logged — PIN ${pin}. Ready for the next order.`;
+    errorEl.style.display = 'block';
+    setTimeout(() => { errorEl.style.display = 'none'; }, 4000);
 
   } catch(e) {
+    errorEl.style.background = '#fff0f0';
+    errorEl.style.borderColor = '#ffcccc';
+    errorEl.style.color = '#cc0000';
     errorEl.textContent = e.message || 'Something went wrong. Please try again.';
     errorEl.style.display = 'block';
-    btn.disabled = false;
+  } finally {
+    btn.disabled = drinks.length === 0;
     processingEl.style.display = 'none';
   }
 }
