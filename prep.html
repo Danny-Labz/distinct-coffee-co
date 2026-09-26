@@ -127,6 +127,118 @@
       justify-content: center;
       gap: 8px;
     }
+    /* HANDS-FREE AUTO MODE */
+    .auto-mode-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--black);
+      z-index: 500;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 32px;
+      text-align: center;
+    }
+    .auto-mode-overlay.open { display: flex; }
+    .auto-mode-exit {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(248,246,242,0.1);
+      border: none;
+      color: var(--white);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .auto-mode-progress {
+      position: absolute;
+      top: 0; left: 0;
+      height: 3px;
+      background: var(--green);
+      transition: width 7s linear;
+      width: 0%;
+    }
+    .auto-mode-counter {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: rgba(248,246,242,0.4);
+      font-weight: 600;
+    }
+    .auto-mode-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-bottom: 6px;
+    }
+    .auto-mode-pin {
+      font-size: 80px;
+      font-weight: 800;
+      letter-spacing: 14px;
+      line-height: 1;
+      margin-bottom: 8px;
+      animation: fadeIn 0.4s ease;
+    }
+    .auto-mode-customer {
+      font-size: 22px;
+      font-weight: 300;
+      color: rgba(248,246,242,0.6);
+      margin-bottom: 28px;
+    }
+    .auto-mode-drink-name {
+      font-size: 46px;
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 10px;
+      animation: fadeIn 0.4s ease;
+    }
+    .auto-mode-drink-config {
+      font-size: 18px;
+      color: rgba(248,246,242,0.55);
+      margin-bottom: 28px;
+      letter-spacing: 0.3px;
+    }
+    .auto-mode-recipe {
+      background: rgba(248,246,242,0.06);
+      border-left: 3px solid rgba(248,246,242,0.25);
+      border-radius: 0 8px 8px 0;
+      padding: 20px 26px;
+      max-width: 480px;
+      width: 100%;
+      animation: fadeIn 0.4s ease;
+    }
+    .auto-mode-recipe.recipe-missing {
+      border-left-color: var(--yellow);
+      color: var(--yellow);
+      font-size: 16px;
+      font-style: italic;
+    }
+    .auto-mode-recipe-line {
+      display: flex;
+      gap: 14px;
+      font-size: 20px;
+      padding: 6px 0;
+      color: rgba(248,246,242,0.9);
+    }
+    .auto-mode-recipe-line.addon { color: var(--yellow); }
+    .auto-mode-recipe-qty {
+      font-weight: 800;
+      min-width: 76px;
+      text-align: right;
+    }
+    .auto-mode-empty {
+      font-size: 20px;
+      color: rgba(248,246,242,0.4);
+    }
+
     /* SHRINK MODAL */
     .shrink-modal-overlay {
       display: none;
@@ -593,9 +705,12 @@
       <button class="mode-btn" id="mode-event" onclick="setMode('event')">Today's Event</button>
     </div>
 
-    <div class="filter-bar" style="padding:0 20px 16px;gap:10px;">
+    <div class="filter-bar" style="padding:0 20px 16px;gap:10px;flex-wrap:wrap;">
       <button class="queue-view-btn" id="queue-view-btn" onclick="openQueueView()">📋 View Queue <span id="queue-view-count" class="queue-view-count">0</span></button>
       <button class="queue-view-btn" style="background:rgba(211,47,47,0.12);border-color:rgba(211,47,47,0.3);color:#d32f2f;" onclick="openShrinkModal()">🗑️ Log Shrink</button>
+    </div>
+    <div class="filter-bar" style="padding:0 20px 16px;">
+      <button class="queue-view-btn" style="background:rgba(46,125,50,0.12);border-color:rgba(46,125,50,0.3);color:var(--green);" onclick="startAutoMode()">▶️ Hands-Free Mode — Auto-Cycle Drinks</button>
     </div>
 
     <div class="pin-search">
@@ -618,6 +733,14 @@
       <button class="queue-view-refresh" onclick="loadQueueList()">↻</button>
     </div>
     <div id="queue-view-list"></div>
+  </div>
+
+  <!-- HANDS-FREE AUTO MODE -->
+  <div id="auto-mode-overlay" class="auto-mode-overlay">
+    <div class="auto-mode-progress" id="auto-mode-progress"></div>
+    <button class="auto-mode-exit" onclick="stopAutoMode()">×</button>
+    <div class="auto-mode-counter" id="auto-mode-counter"></div>
+    <div id="auto-mode-content"></div>
   </div>
 
   <!-- SHRINK MODAL -->
@@ -1215,6 +1338,146 @@
         errorEl.textContent = `Could not log shrink: ${e.message}`;
         errorEl.style.display = 'block';
       }
+    }
+
+    // ─── HANDS-FREE AUTO MODE ───────────────────────────────
+    // Cycles through every individual drink across all pending orders,
+    // one every 7 seconds, fully hands-off — for prepping behind the cart
+    // without needing to touch the device. Each drink shows its own PIN,
+    // customer, name, and adjusted recipe (milk substitution + add-ons),
+    // reusing the exact same buildAdjustedRecipe logic the manual PIN-lookup
+    // view uses, so recipe accuracy is identical either way.
+    let autoModeDrinks = [];
+    let autoModeIndex = 0;
+    let autoModeTimer = null;
+    const AUTO_MODE_INTERVAL_MS = 7000;
+
+    async function startAutoMode() {
+      await loadRecipeData(); // ensure allRecipeItems / allIngredientsMap are ready
+
+      document.getElementById('auto-mode-overlay').classList.add('open');
+      document.getElementById('auto-mode-content').innerHTML = '<div class="auto-mode-empty">Loading queue...</div>';
+
+      await refreshAutoModeQueue();
+
+      if (!autoModeDrinks.length) {
+        document.getElementById('auto-mode-content').innerHTML = '<div class="auto-mode-empty">☕<br><br>Queue is empty — nothing to cycle through.</div>';
+        return;
+      }
+
+      autoModeIndex = 0;
+      renderAutoModeDrink();
+      runAutoModeCycle();
+    }
+
+    function stopAutoMode() {
+      document.getElementById('auto-mode-overlay').classList.remove('open');
+      if (autoModeTimer) clearInterval(autoModeTimer);
+      autoModeTimer = null;
+    }
+
+    async function refreshAutoModeQueue() {
+      // Same query shape as the manual queue view, respecting the current
+      // All Unfulfilled / Today's Event toggle.
+      let path = `status=in.(paid,reserved)&fulfilled_at=is.null&order=created_at.asc&select=*`;
+      if (currentMode === 'event' && activeEventId) {
+        path += `&event_id=eq.${activeEventId}`;
+      }
+
+      let orders = [];
+      try {
+        orders = await adminFetchOrders(path);
+      } catch (e) {
+        orders = [];
+      }
+
+      // Flatten every order into individual drinks — same shape renderOrder
+      // uses, so one order with 3 different drinks becomes 3 separate slides.
+      const flat = [];
+      orders.forEach(order => {
+        if (!order.items) return;
+        Object.entries(order.items).forEach(([itemId, val]) => {
+          if (Array.isArray(val)) {
+            val.forEach(d => flat.push({
+              itemId, name: d.name, label: d.label, milk: d.milk, addons: d.addons || [],
+              pin: order.pickup_pin, customerName: order.customer_name,
+            }));
+          } else if (val && typeof val === 'object') {
+            const qty = val.qty || 1;
+            for (let n = 0; n < qty; n++) {
+              flat.push({
+                itemId, name: val.name, label: null, milk: null, addons: [],
+                pin: order.pickup_pin, customerName: order.customer_name,
+              });
+            }
+          }
+        });
+      });
+
+      autoModeDrinks = flat;
+      document.getElementById('auto-mode-counter').textContent = flat.length
+        ? `Auto-cycling · ${flat.length} drink${flat.length === 1 ? '' : 's'} in queue`
+        : '';
+    }
+
+    function runAutoModeCycle() {
+      if (autoModeTimer) clearInterval(autoModeTimer);
+
+      autoModeTimer = setInterval(async () => {
+        // Refresh the queue periodically so newly-arrived orders join the
+        // rotation and fulfilled ones drop out, without interrupting the
+        // current slide's remaining display time.
+        await refreshAutoModeQueue();
+
+        if (!autoModeDrinks.length) {
+          document.getElementById('auto-mode-content').innerHTML = '<div class="auto-mode-empty">☕<br><br>Queue is empty — nothing to cycle through.</div>';
+          return;
+        }
+
+        autoModeIndex = (autoModeIndex + 1) % autoModeDrinks.length;
+        renderAutoModeDrink();
+      }, AUTO_MODE_INTERVAL_MS);
+    }
+
+    function renderAutoModeDrink() {
+      const drink = autoModeDrinks[autoModeIndex];
+      if (!drink) return;
+
+      const recipe = buildAdjustedRecipe(drink.itemId, drink.milk, drink.addons);
+      let recipeHtml;
+      if (recipe && recipe.length) {
+        recipeHtml = `
+          <div class="auto-mode-recipe">
+            ${recipe.map(r => `
+              <div class="auto-mode-recipe-line ${r.isAddon ? 'addon' : ''}">
+                <span class="auto-mode-recipe-qty">${r.totalQty % 1 === 0 ? r.totalQty : r.totalQty.toFixed(2)} ${r.unit}</span>
+                <span>${r.name}</span>
+              </div>
+            `).join('')}
+          </div>`;
+      } else {
+        recipeHtml = `<div class="auto-mode-recipe recipe-missing">No recipe set for this item yet</div>`;
+      }
+
+      const configLine = [drink.milk, ...(drink.addons || [])].filter(Boolean).join(' · ');
+
+      document.getElementById('auto-mode-content').innerHTML = `
+        <div class="auto-mode-label">${autoModeIndex + 1} of ${autoModeDrinks.length}</div>
+        <div class="auto-mode-pin">${drink.pin || '----'}</div>
+        <div class="auto-mode-customer">${drink.label ? `${drink.label} — ` : ''}${drink.customerName || 'Guest'}</div>
+        <div class="auto-mode-drink-name">${drink.name}</div>
+        ${configLine ? `<div class="auto-mode-drink-config">${configLine}</div>` : '<div style="margin-bottom:28px;"></div>'}
+        ${recipeHtml}
+      `;
+
+      // Restart the progress bar animation for this slide's 7 seconds
+      const bar = document.getElementById('auto-mode-progress');
+      bar.style.transition = 'none';
+      bar.style.width = '0%';
+      requestAnimationFrame(() => {
+        bar.style.transition = `width ${AUTO_MODE_INTERVAL_MS/1000}s linear`;
+        bar.style.width = '100%';
+      });
     }
   </script>
 </body>
