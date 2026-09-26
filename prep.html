@@ -111,7 +111,7 @@
 
     /* QUEUE VIEW BUTTON */
     .queue-view-btn {
-      width: 100%;
+      flex: 1;
       background: rgba(21,101,192,0.12);
       border: 1px solid rgba(21,101,192,0.3);
       color: var(--blue);
@@ -127,6 +127,84 @@
       justify-content: center;
       gap: 8px;
     }
+    /* SHRINK MODAL */
+    .shrink-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 400;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .shrink-modal-overlay.open { display: flex; }
+    .shrink-modal-box {
+      background: var(--black);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 420px;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .shrink-modal-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .shrink-field-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: rgba(248,246,242,0.5);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .shrink-field-group { margin-bottom: 16px; }
+    .shrink-select, .shrink-textarea {
+      width: 100%;
+      background: rgba(248,246,242,0.08);
+      border: 1px solid rgba(248,246,242,0.15);
+      color: var(--white);
+      border-radius: 4px;
+      padding: 12px 14px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px;
+    }
+    .shrink-textarea { resize: vertical; min-height: 60px; }
+    .shrink-cost-preview {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--white);
+    }
+    .shrink-modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .shrink-btn-cancel, .shrink-btn-save {
+      flex: 1;
+      padding: 13px;
+      border-radius: 4px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      border: none;
+    }
+    .shrink-btn-cancel { background: rgba(248,246,242,0.1); color: var(--white); }
+    .shrink-btn-save { background: #d32f2f; color: white; }
+    .shrink-error {
+      display: none;
+      font-size: 11px;
+      color: #ff6b6b;
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+
     .queue-view-count {
       background: var(--blue);
       color: white;
@@ -515,8 +593,9 @@
       <button class="mode-btn" id="mode-event" onclick="setMode('event')">Today's Event</button>
     </div>
 
-    <div class="filter-bar" style="padding:0 20px 16px;">
+    <div class="filter-bar" style="padding:0 20px 16px;gap:10px;">
       <button class="queue-view-btn" id="queue-view-btn" onclick="openQueueView()">📋 View Queue <span id="queue-view-count" class="queue-view-count">0</span></button>
+      <button class="queue-view-btn" style="background:rgba(211,47,47,0.12);border-color:rgba(211,47,47,0.3);color:#d32f2f;" onclick="openShrinkModal()">🗑️ Log Shrink</button>
     </div>
 
     <div class="pin-search">
@@ -539,6 +618,45 @@
       <button class="queue-view-refresh" onclick="loadQueueList()">↻</button>
     </div>
     <div id="queue-view-list"></div>
+  </div>
+
+  <!-- SHRINK MODAL -->
+  <div id="shrink-modal-overlay" class="shrink-modal-overlay">
+    <div class="shrink-modal-box">
+      <div class="shrink-modal-title">🗑️ Log Shrink</div>
+      <div class="shrink-error" id="shrink-error"></div>
+
+      <div class="shrink-field-group">
+        <label class="shrink-field-label">Drink</label>
+        <select class="shrink-select" id="shrink-item-select" onchange="updateShrinkCostPreview()"></select>
+      </div>
+
+      <div class="shrink-field-group">
+        <label class="shrink-field-label">Reason</label>
+        <select class="shrink-select" id="shrink-reason-select">
+          <option>Spilled</option>
+          <option>Wrong Order</option>
+          <option>Customer Complaint</option>
+          <option>Equipment Issue</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="shrink-field-group">
+        <label class="shrink-field-label">Notes (optional)</label>
+        <textarea class="shrink-textarea" id="shrink-notes-input" placeholder="Any extra detail..."></textarea>
+      </div>
+
+      <div class="shrink-field-group" style="margin-bottom:0;">
+        <label class="shrink-field-label">Estimated Cost</label>
+        <div class="shrink-cost-preview" id="shrink-cost-preview">$0.00</div>
+      </div>
+
+      <div class="shrink-modal-actions">
+        <button class="shrink-btn-cancel" onclick="closeShrinkModal()">Cancel</button>
+        <button class="shrink-btn-save" onclick="saveShrinkLog()">Log It</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1000,6 +1118,102 @@
       if (pin) {
         document.getElementById('pin-input').value = pin;
         lookupPin(pin);
+      }
+    }
+
+    // ─── SHRINK LOGGING ──────────────────────────────────
+    let allMenuItemsForShrink = null;
+
+    async function openShrinkModal() {
+      document.getElementById('shrink-error').style.display = 'none';
+      document.getElementById('shrink-notes-input').value = '';
+      document.getElementById('shrink-reason-select').value = 'Spilled';
+
+      // Make sure recipe/ingredient data is loaded so we can price the drink
+      await loadRecipeData();
+
+      if (!allMenuItemsForShrink) {
+        try {
+          allMenuItemsForShrink = await supaFetch('menu_items?select=id,name&order=category.asc,sort_order.asc');
+        } catch (e) {
+          allMenuItemsForShrink = [];
+        }
+      }
+
+      const itemSel = document.getElementById('shrink-item-select');
+      itemSel.innerHTML = allMenuItemsForShrink.map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+
+      updateShrinkCostPreview();
+      document.getElementById('shrink-modal-overlay').classList.add('open');
+    }
+
+    function closeShrinkModal() {
+      document.getElementById('shrink-modal-overlay').classList.remove('open');
+    }
+
+    function updateShrinkCostPreview() {
+      const itemId = document.getElementById('shrink-item-select').value;
+      const recipe = (allRecipeItems && allRecipeItems[itemId]) || [];
+      let cost = 0;
+      recipe.forEach(ri => {
+        const ing = allIngredientsMap ? allIngredientsMap[ri.ingredient_id] : null;
+        if (!ing) return;
+        cost += ing.cost_cents * parseFloat(ri.quantity);
+      });
+      document.getElementById('shrink-cost-preview').textContent = `$${(cost/100).toFixed(2)}`;
+    }
+
+    async function saveShrinkLog() {
+      const errorEl = document.getElementById('shrink-error');
+      errorEl.style.display = 'none';
+
+      const itemSel = document.getElementById('shrink-item-select');
+      const itemId = itemSel.value;
+      const itemName = itemSel.options[itemSel.selectedIndex]?.textContent || '';
+      const reason = document.getElementById('shrink-reason-select').value;
+      const notes = document.getElementById('shrink-notes-input').value.trim();
+
+      if (!itemId) { errorEl.textContent = 'Please select a drink.'; errorEl.style.display = 'block'; return; }
+
+      const recipe = (allRecipeItems && allRecipeItems[itemId]) || [];
+      let costCents = 0;
+      recipe.forEach(ri => {
+        const ing = allIngredientsMap ? allIngredientsMap[ri.ingredient_id] : null;
+        if (!ing) return;
+        costCents += ing.cost_cents * parseFloat(ri.quantity);
+      });
+
+      // Auto-associates with today's active event, if there is one — same
+      // event context Prep View is already working within.
+      let eventName = null;
+      if (activeEventId) {
+        try {
+          const [ev] = await supaFetch(`events?id=eq.${activeEventId}&select=name`);
+          eventName = ev ? ev.name : null;
+        } catch (e) { /* not critical — log without event context if this fails */ }
+      }
+
+      try {
+        const res = await fetch('/.netlify/functions/admin-shrink', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            data: {
+              menu_item_id: itemId,
+              menu_item_name: itemName,
+              event_id: activeEventId || null,
+              event_name: eventName,
+              reason,
+              cost_cents: costCents,
+              notes: notes || null,
+            },
+          }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        closeShrinkModal();
+      } catch (e) {
+        errorEl.textContent = `Could not log shrink: ${e.message}`;
+        errorEl.style.display = 'block';
       }
     }
   </script>
