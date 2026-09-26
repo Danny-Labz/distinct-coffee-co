@@ -239,6 +239,27 @@
       color: rgba(248,246,242,0.4);
     }
 
+    .auto-mode-notes {
+      background: var(--yellow-bg);
+      color: #7a5200;
+      padding: 18px 22px;
+      border-radius: 8px;
+      font-size: 17px;
+      line-height: 1.6;
+      margin-top: 20px;
+      max-width: 480px;
+      width: 100%;
+      animation: fadeIn 0.4s ease;
+    }
+    .auto-mode-notes strong {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      opacity: 0.75;
+    }
+
     /* SHRINK MODAL */
     .shrink-modal-overlay {
       display: none;
@@ -1400,14 +1421,14 @@
           if (Array.isArray(val)) {
             val.forEach(d => flat.push({
               itemId, name: d.name, label: d.label, milk: d.milk, addons: d.addons || [],
-              pin: order.pickup_pin, customerName: order.customer_name,
+              pin: order.pickup_pin, customerName: order.customer_name, notes: order.notes,
             }));
           } else if (val && typeof val === 'object') {
             const qty = val.qty || 1;
             for (let n = 0; n < qty; n++) {
               flat.push({
                 itemId, name: val.name, label: null, milk: null, addons: [],
-                pin: order.pickup_pin, customerName: order.customer_name,
+                pin: order.pickup_pin, customerName: order.customer_name, notes: order.notes,
               });
             }
           }
@@ -1461,6 +1482,14 @@
 
       const configLine = [drink.milk, ...(drink.addons || [])].filter(Boolean).join(' · ');
 
+      // Customer notes are order-level (not per-drink), so the same note
+      // shows on every drink from that order — matches how the manual PIN
+      // view surfaces them too, just repeated per-slide here since each
+      // drink gets its own screen.
+      const notesHtml = drink.notes
+        ? `<div class="auto-mode-notes"><strong>Customer Notes</strong>${drink.notes}</div>`
+        : '';
+
       document.getElementById('auto-mode-content').innerHTML = `
         <div class="auto-mode-label">${autoModeIndex + 1} of ${autoModeDrinks.length}</div>
         <div class="auto-mode-pin">${drink.pin || '----'}</div>
@@ -1468,6 +1497,7 @@
         <div class="auto-mode-drink-name">${drink.name}</div>
         ${configLine ? `<div class="auto-mode-drink-config">${configLine}</div>` : '<div style="margin-bottom:28px;"></div>'}
         ${recipeHtml}
+        ${notesHtml}
       `;
 
       // Restart the progress bar animation for this slide's 7 seconds
