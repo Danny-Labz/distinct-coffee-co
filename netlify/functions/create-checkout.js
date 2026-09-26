@@ -15,7 +15,12 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { order_id, items, customer_email, event_name } = JSON.parse(event.body);
+    const { order_id, items, customer_email, event_name, return_path } = JSON.parse(event.body);
+    // return_path lets a caller (like Counter Mode) send the operator back
+    // to its own page after payment instead of the customer-facing
+    // confirmation screen. Defaults to the normal flow when omitted.
+    const successPath = return_path ? `${return_path}?order_id=${order_id}&session_id={CHECKOUT_SESSION_ID}&paid=1` : `confirmation.html?order_id=${order_id}&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelPath   = return_path ? `${return_path}?cancelled=1` : `order.html`;
 
     const addonPrices = {
       'Extra Shot':      100,
@@ -70,8 +75,8 @@ exports.handler = async (event) => {
       ...(customer_email ? { customer_email } : {}),
       line_items: lineItems,
       metadata: { order_id },
-      success_url: `${process.env.SITE_URL}/confirmation.html?order_id=${order_id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${process.env.SITE_URL}/order.html`,
+      success_url: `${process.env.SITE_URL}/${successPath}`,
+      cancel_url:  `${process.env.SITE_URL}/${cancelPath}`,
     });
 
     return {
