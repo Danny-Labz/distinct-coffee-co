@@ -439,10 +439,10 @@
       .refresh-btn { margin-left: 0; }
 
       /* Hide desktop tables on mobile — EXCEPT ones with no mobile card view */
-      .table-wrap table:not(#inventory-table):not(#milk-table):not(#syrup-table):not(#ingredients-table):not(#recipe-ingredients-table):not(#cost-drinks-table):not(#cost-supply-table):not(#loyalty-table):not(#shrink-table) { display: none !important; }
+      .table-wrap table:not(#inventory-table):not(#milk-table):not(#syrup-table):not(#ingredients-table):not(#recipe-ingredients-table):not(#cost-drinks-table):not(#cost-supply-table):not(#loyalty-table):not(#shrink-table):not(#customers-table) { display: none !important; }
 
       /* These tables: keep visible but make them horizontally scrollable on mobile */
-      #inventory-table, #milk-table, #syrup-table, #ingredients-table, #recipe-ingredients-table, #cost-drinks-table, #cost-supply-table, #loyalty-table, #shrink-table { display: table !important; font-size: 10px; }
+      #inventory-table, #milk-table, #syrup-table, #ingredients-table, #recipe-ingredients-table, #cost-drinks-table, #cost-supply-table, #loyalty-table, #shrink-table, #customers-table { display: table !important; font-size: 10px; }
       .table-wrap { overflow-x: auto; }
 
       /* Show mobile cards instead */
@@ -746,6 +746,9 @@
       </button>
       <button class="tab" onclick="switchTab('loyalty', this)">
         Loyalty
+      </button>
+      <button class="tab" onclick="switchTab('customers', this)">
+        Customers
       </button>
     </div>
 
@@ -1298,6 +1301,71 @@
         </div>
       </div>
 
+      <!-- ── CUSTOMERS PANEL ── -->
+      <div class="panel" id="panel-customers">
+        <div class="filter-bar">
+          <input type="text" class="filter-input" id="customers-search" placeholder="Search by name, email, or phone..." oninput="debounceCustomersSearch()" />
+          <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="loadCustomers()">↻ Refresh</button>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-card-label">Total Customers</div>
+            <div class="stat-card-value" id="customers-total-count">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Repeat Customers</div>
+            <div class="stat-card-value" id="customers-repeat-count">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Total Lifetime Revenue</div>
+            <div class="stat-card-value" id="customers-total-revenue">—</div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <div class="loading" id="customers-loading">Loading customers...</div>
+          <table id="customers-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Orders</th>
+                <th>Lifetime Spent</th>
+                <th>Favorite Drink</th>
+                <th>Loyalty</th>
+                <th>Last Order</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="customers-body"></tbody>
+          </table>
+          <div class="empty-state" id="customers-empty" style="display:none;">
+            <div class="empty-state-icon">👤</div>
+            <div class="empty-state-text">No customer history yet</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CUSTOMER DETAIL MODAL -->
+  <div id="customer-detail-overlay" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:600px;">
+      <div class="modal-header">
+        <span id="customer-detail-name">Customer</span>
+        <button class="modal-close" onclick="closeCustomerDetail()">×</button>
+      </div>
+      <div class="modal-body" style="max-height:65vh;overflow-y:auto;">
+        <div id="customer-detail-summary" style="background:var(--off-white);border-radius:6px;padding:16px 18px;margin-bottom:18px;font-size:12px;line-height:1.8;"></div>
+        <div class="section-label" style="margin-bottom:10px;">Order History</div>
+        <div id="customer-detail-orders"></div>
+      </div>
+      <div class="modal-footer">
+        <div style="flex:1;"></div>
+        <button class="modal-btn-cancel" onclick="closeCustomerDetail()">Close</button>
+      </div>
     </div>
   </div>
 
@@ -1642,6 +1710,10 @@
 
       if (name === 'costs') {
         populateCostEventSelect();
+      }
+      if (name === 'customers' && !customersLoadedOnce) {
+        customersLoadedOnce = true;
+        loadCustomers();
       }
     }
 
@@ -3691,6 +3763,138 @@
       } catch (e) {
         alert(`Could not remove entry: ${e.message}`);
       }
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    // CUSTOMERS TAB
+    // ═══════════════════════════════════════════════════════
+
+    let allCustomers = [];
+    let customersLoadedOnce = false;
+    let customersSearchTimer = null;
+
+    function debounceCustomersSearch() {
+      clearTimeout(customersSearchTimer);
+      customersSearchTimer = setTimeout(renderCustomers, 250);
+    }
+
+    async function loadCustomers() {
+      document.getElementById('customers-loading').style.display = 'block';
+      document.getElementById('customers-table').style.display  = 'none';
+      document.getElementById('customers-empty').style.display  = 'none';
+
+      try {
+        const res = await fetch('/.netlify/functions/admin-customers');
+        if (!res.ok) throw new Error(await res.text());
+        allCustomers = await res.json();
+        renderCustomers();
+      } catch (e) {
+        document.getElementById('customers-loading').textContent = `Failed to load: ${e.message}`;
+      }
+    }
+
+    function renderCustomers() {
+      document.getElementById('customers-loading').style.display = 'none';
+
+      const search = document.getElementById('customers-search').value.trim().toLowerCase();
+      const filtered = search
+        ? allCustomers.filter(c =>
+            `${c.name} ${c.email} ${c.phone}`.toLowerCase().includes(search))
+        : allCustomers;
+
+      // Stats always reflect the full customer base, not the current search,
+      // so filtering to look someone up doesn't make the overview numbers jump around.
+      const totalCustomers = allCustomers.length;
+      const repeatCustomers = allCustomers.filter(c => c.orderCount > 1).length;
+      const totalRevenue = allCustomers.reduce((sum, c) => sum + (c.totalSpentCents || 0), 0);
+      document.getElementById('customers-total-count').textContent = totalCustomers;
+      document.getElementById('customers-repeat-count').textContent = repeatCustomers;
+      document.getElementById('customers-total-revenue').textContent = `$${(totalRevenue/100).toFixed(2)}`;
+
+      if (!filtered.length) {
+        document.getElementById('customers-table').style.display = 'none';
+        document.getElementById('customers-empty').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('customers-table').style.display = 'table';
+      document.getElementById('customers-empty').style.display = 'none';
+
+      document.getElementById('customers-body').innerHTML = filtered.map((c, idx) => {
+        const contact = [c.email, c.phone].filter(Boolean).join(' · ') || '—';
+        const lastOrder = c.lastOrderAt
+          ? new Date(c.lastOrderAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+          : '—';
+
+        let loyaltyCell = '<span class="td-small">Not enrolled</span>';
+        if (c.loyalty) {
+          const unredeemed = Math.max(0, c.loyalty.rewardsEarned - c.loyalty.rewardsRedeemed);
+          loyaltyCell = unredeemed > 0
+            ? `<span style="background:var(--green-bg);color:var(--green);font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;">${unredeemed} FREE DRINK${unredeemed>1?'S':''}</span>`
+            : `<span class="td-small">${c.loyalty.punchCount}/10 punches</span>`;
+        }
+
+        return `
+        <tr style="cursor:pointer;" onclick="openCustomerDetail(${idx})">
+          <td class="td-name">${c.name || 'Unknown'}</td>
+          <td class="td-small">${contact}</td>
+          <td>${c.orderCount}</td>
+          <td>$${((c.totalSpentCents||0)/100).toFixed(2)}</td>
+          <td class="td-small">${c.favoriteDrink || '—'}</td>
+          <td>${loyaltyCell}</td>
+          <td class="td-small">${lastOrder}</td>
+          <td><span class="td-small" style="color:var(--mid);">View →</span></td>
+        </tr>`;
+      }).join('');
+
+      // Stash the filtered list so row clicks (indexed against it) open the right customer
+      window._customersFiltered = filtered;
+    }
+
+    function openCustomerDetail(idx) {
+      const c = window._customersFiltered[idx];
+      if (!c) return;
+
+      document.getElementById('customer-detail-name').textContent = c.name || 'Unknown Customer';
+
+      const contact = [c.email, c.phone].filter(Boolean).join(' · ') || 'No contact info';
+      const firstOrder = c.firstOrderAt ? new Date(c.firstOrderAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+      const lastOrder = c.lastOrderAt ? new Date(c.lastOrderAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+
+      let loyaltyLine = 'Not enrolled in Rewards';
+      if (c.loyalty) {
+        const unredeemed = Math.max(0, c.loyalty.rewardsEarned - c.loyalty.rewardsRedeemed);
+        loyaltyLine = `${c.loyalty.punchCount}/10 punches · ${c.loyalty.totalDrinks} lifetime drinks · ${unredeemed > 0 ? `<strong style="color:var(--green);">${unredeemed} unredeemed reward${unredeemed>1?'s':''}</strong>` : `${c.loyalty.rewardsEarned} rewards earned`}`;
+        if (c.loyalty.smsOptedOut) loyaltyLine += ' · <span style="color:#c00;">SMS opted out</span>';
+      }
+
+      document.getElementById('customer-detail-summary').innerHTML = `
+        <div><strong>Contact:</strong> ${contact}</div>
+        <div><strong>Orders:</strong> ${c.orderCount} · <strong>Lifetime Spent:</strong> $${((c.totalSpentCents||0)/100).toFixed(2)}</div>
+        <div><strong>Favorite Drink:</strong> ${c.favoriteDrink || '—'}</div>
+        <div><strong>Customer Since:</strong> ${firstOrder} · <strong>Last Order:</strong> ${lastOrder}</div>
+        <div><strong>Loyalty:</strong> ${loyaltyLine}</div>
+      `;
+
+      const sortedOrders = [...c.orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      document.getElementById('customer-detail-orders').innerHTML = sortedOrders.map(o => {
+        const date = o.created_at ? new Date(o.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
+        return `
+        <div style="background:var(--off-white);border-radius:6px;padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <div>
+            <div style="font-size:12px;font-weight:600;">${o.event_name || 'Order'} — PIN ${o.pickup_pin || '----'}</div>
+            <div style="font-size:11px;color:#777;margin-top:2px;">${date} · ${o.drinkCount} drink${o.drinkCount===1?'':'s'} · ${o.status}</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;">$${((o.total_cents||0)/100).toFixed(2)}</div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('customer-detail-overlay').style.display = 'flex';
+    }
+
+    function closeCustomerDetail() {
+      document.getElementById('customer-detail-overlay').style.display = 'none';
     }
 
   </script>
