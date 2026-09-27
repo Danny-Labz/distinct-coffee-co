@@ -30,7 +30,12 @@ exports.handler = async (event) => {
 
   if (event.httpMethod === 'POST') {
     try {
-      const data = JSON.parse(event.body);
+      const body = JSON.parse(event.body);
+      // Both callers (admin.html and prep.html) send the fields nested
+      // under a "data" key — accept that shape, falling back to top-level
+      // fields too in case a future caller sends it flat.
+      const data = body.data || body;
+
       if (!data.menu_item_name || !data.reason) {
         return { statusCode: 400, body: JSON.stringify({ error: 'menu_item_name and reason are required' }) };
       }
