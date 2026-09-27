@@ -521,6 +521,7 @@ async function logOrder() {
     pickup_pin:     pin,
     loyalty_optin:  false,
     notes:          'Placed via Counter Mode — payment collected separately in Stripe.',
+    source:         'counter', // tells create-order.js this status:paid is legitimate, not customer-spoofed
   };
 
   try {
