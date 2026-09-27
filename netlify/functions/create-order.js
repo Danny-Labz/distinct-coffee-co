@@ -7,9 +7,17 @@
 const SUPABASE_URL = 'https://qjsitqvfimwiuoojsoge.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-// Customers may only create orders in these states; paid/fulfilled etc.
-// are set server-side by the Stripe webhook and admin.
+// The public customer-facing order page may only create orders in these
+// states; paid/fulfilled etc. are normally set server-side by the Stripe
+// webhook or admin, never trusted directly from a customer's browser.
 const ALLOWED_STATUSES = ['pending', 'reserved'];
+
+// Counter Mode (operator-only, unlisted page) legitimately submits orders
+// that are already paid — payment was collected separately in the Stripe
+// Dashboard app, not through this order. It flags that explicitly via
+// source: 'counter', which is the only way status: 'paid' is honored here;
+// the public order form never sends this field, so it can't spoof paid.
+const COUNTER_MODE_ALLOWED_STATUSES = ['pending', 'reserved', 'paid'];
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -21,7 +29,12 @@ exports.handler = async (event) => {
 
     delete order.id;
     delete order.created_at;
-    if (!ALLOWED_STATUSES.includes(order.status)) order.status = 'pending';
+
+    const isCounterMode = order.source === 'counter';
+    delete order.source; // internal flag only — not a real orders column
+
+    const allowedStatuses = isCounterMode ? COUNTER_MODE_ALLOWED_STATUSES : ALLOWED_STATUSES;
+    if (!allowedStatuses.includes(order.status)) order.status = 'pending';
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
       method: 'POST',
