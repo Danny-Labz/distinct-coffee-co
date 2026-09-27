@@ -1,0 +1,21 @@
+{
+  "name": "Distinct. Coffee Co.",
+  "short_name": "Distinct.",
+  "description": "Order coffee from Distinct. Coffee Co.",
+  "start_url": "/order.html",
+  "display": "standalone",
+  "background_color": "#f8f6f2",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
