@@ -197,12 +197,43 @@
 
     .empty-note { text-align: center; padding: 40px 20px; color: var(--mid); font-size: 12px; }
   </style>
+  <!-- Refresh button: only shown when launched from the home screen,
+       where iOS hides Safari's toolbar (and its reload button). -->
+  <style>
+    .app-refresh {
+      display: none;
+      align-items: center; justify-content: center;
+      width: 32px; height: 32px; padding: 0; flex-shrink: 0;
+      border-radius: 50%;
+      border: 1px solid rgba(248,246,242,0.25);
+      background: transparent;
+      color: #f8f6f2;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .app-refresh:active { background: rgba(248,246,242,0.12); }
+    .app-refresh:focus-visible { outline: 2px solid #f8f6f2; outline-offset: 2px; }
+    .app-refresh svg { width: 16px; height: 16px; }
+    .app-refresh.spinning svg { animation: app-refresh-spin 0.6s linear infinite; }
+    @keyframes app-refresh-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .app-refresh.spinning svg { animation: none; opacity: 0.4; } }
+    @media (display-mode: standalone) { .app-refresh { display: inline-flex; } }
+    html.is-standalone .app-refresh { display: inline-flex; }
+    .topbar-right-group { display: flex; align-items: center; gap: 12px; }
+  </style>
+  <script>
+    if (window.navigator.standalone) document.documentElement.classList.add('is-standalone');
+    function appRefresh(btn) { btn.classList.add('spinning'); setTimeout(function(){ location.reload(); }, 150); }
+  </script>
 </head>
 <body>
 
 <div class="topbar">
   <div class="topbar-title">☕ Counter Mode</div>
-  <div class="topbar-event" id="topbar-event">Loading event...</div>
+  <div class="topbar-right-group">
+    <div class="topbar-event" id="topbar-event">Loading event...</div>
+    <button class="app-refresh" type="button" aria-label="Refresh" onclick="appRefresh(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
+  </div>
 </div>
 
 <main>
