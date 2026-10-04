@@ -1019,9 +1019,9 @@
       <div class="panel" id="panel-reports">
         <div class="filter-bar">
           <select class="filter-select" id="report-filter-status" onchange="renderReports()">
-            <option value="">All Orders (Paid + Reserved)</option>
-            <option value="paid">Paid Online Only</option>
-            <option value="reserved">Reserved (Pay at Event) Only</option>
+            <option value="">All Sales (Paid, Reserved + Fulfilled)</option>
+            <option value="paid">Paid Up Front (Online + Counter)</option>
+            <option value="reserved">Pay at Event Only</option>
           </select>
           <button class="refresh-btn" style="background:var(--white);color:var(--black);border:1px solid var(--border);" onclick="loadReports()">↻ Refresh</button>
         </div>
@@ -1890,7 +1890,11 @@
 
       const paid     = filtered.filter(o => o.status === 'paid');
       const reserved = filtered.filter(o => o.status === 'reserved');
-      const revenue  = paid.reduce((sum, o) => sum + (o.total_cents || 0), 0);
+      // Collected revenue = paid orders + fulfilled orders (served, so paid
+      // either online, at the counter, or at pickup).
+      const revenue  = filtered
+        .filter(o => o.status === 'paid' || o.status === 'fulfilled')
+        .reduce((sum, o) => sum + (o.total_cents || 0), 0);
       document.getElementById('stat-total').textContent    = filtered.length;
       document.getElementById('stat-paid').textContent     = paid.length;
       document.getElementById('stat-reserved').textContent = reserved.length;
@@ -2744,10 +2748,18 @@
       const statusFilter = document.getElementById('report-filter-status').value;
       const sourceOrders = allOrders || [];
 
-      // Only count orders that represent real committed revenue: paid or reserved
+      // Count every order that represents real committed revenue. Prep View
+      // flips status to 'fulfilled' when a drink is handed off, so fulfilled
+      // orders must count too (otherwise every order drops out of Reports once
+      // it's served). The payment filter uses payment_method, since status no
+      // longer says how the order was paid after fulfillment.
+      const REVENUE_STATUSES = ['paid', 'reserved', 'fulfilled'];
       let orders = sourceOrders.filter(o => {
-        if (statusFilter) return o.status === statusFilter;
-        return o.status === 'paid' || o.status === 'reserved';
+        if (!REVENUE_STATUSES.includes(o.status)) return false;
+        const payAtEvent = o.payment_method === 'pay_at_event';
+        if (statusFilter === 'paid')     return !payAtEvent;
+        if (statusFilter === 'reserved') return payAtEvent;
+        return true;
       });
 
       document.getElementById('reports-loading').style.display = 'none';
