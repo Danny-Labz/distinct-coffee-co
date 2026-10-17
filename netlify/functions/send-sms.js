@@ -30,10 +30,16 @@ exports.handler = async (event) => {
   const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
   try {
-    const { to, message } = JSON.parse(event.body);
+    const { to, message, consent } = JSON.parse(event.body);
 
     if (!to || !message) {
       return { statusCode: 400, body: JSON.stringify({ error: 'to and message are required' }) };
+    }
+
+    // No explicit opt-in checkbox on the order = no text. The order page and
+    // Stripe webhook only pass consent: true when the customer ticked the box.
+    if (consent !== true) {
+      return { statusCode: 200, body: JSON.stringify({ skipped: true, reason: 'no SMS consent' }) };
     }
 
     // Basic normalization — require a phone number with at least 10 digits.
@@ -65,6 +71,14 @@ exports.handler = async (event) => {
         if (existingMember.sms_opted_out) {
           return { statusCode: 200, body: JSON.stringify({ skipped: true, reason: 'recipient opted out' }) };
         }
+        if (!existingMember.sms_consented) {
+          // They've now ticked the consent box, which counts as opt-in.
+          await fetch(`${SUPABASE_URL}/rest/v1/loyalty_members?id=eq.${existingMember.id}`, {
+            method: 'PATCH',
+            headers: supaHeaders,
+            body: JSON.stringify({ sms_consented: true }),
+          });
+        }
       }
     } catch (lookupErr) {
       console.warn('Opt-out lookup failed, proceeding with send:', lookupErr);
@@ -73,14 +87,13 @@ exports.handler = async (event) => {
     }
 
     if (!existingMember) {
-      // First message ever to this number — append the consent request and
-      // create a bare tracking record so we don't ask again on their next order.
-      finalMessage = `${message} Reply YES for future order & loyalty texts.`;
+      // First message to this number. They ticked the SMS consent box, so no
+      // YES-reply is needed; just create the tracking record as consented.
       try {
         await fetch(`${SUPABASE_URL}/rest/v1/loyalty_members`, {
           method: 'POST',
           headers: supaHeaders,
-          body: JSON.stringify({ phone: normalized, sms_consented: false, sms_opted_out: false }),
+          body: JSON.stringify({ phone: normalized, sms_consented: true, sms_opted_out: false }),
         });
       } catch (createErr) {
         console.warn('Could not create tracking record for new phone number:', createErr);

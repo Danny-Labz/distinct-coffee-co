@@ -112,8 +112,9 @@ exports.handler = async (event) => {
         }
 
         // 5. Send the order confirmation SMS — same idempotency guarantee as
-        // the email above. Skipped entirely if no phone was provided.
-        if (order.phone) {
+        // the email above. Only sent if a phone was provided AND the customer
+        // ticked the SMS consent checkbox on the order form.
+        if (order.phone && order.sms_consent) {
           try {
             const pickupLine = order.pickup_time === 'ASAP — In-Person Order'
               ? "We're starting on it now!"
@@ -123,7 +124,7 @@ exports.handler = async (event) => {
             await fetch(`${siteUrl}/.netlify/functions/send-sms`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ to: order.phone, message: smsBody }),
+              body: JSON.stringify({ to: order.phone, message: smsBody, consent: true }),
             });
             console.log(`Confirmation SMS attempted for order ${orderId}.`);
           } catch (smsErr) {

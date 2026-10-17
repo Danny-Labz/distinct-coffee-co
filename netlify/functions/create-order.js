@@ -36,7 +36,13 @@ exports.handler = async (event) => {
     const allowedStatuses = isCounterMode ? COUNTER_MODE_ALLOWED_STATUSES : ALLOWED_STATUSES;
     if (!allowedStatuses.includes(order.status)) order.status = 'pending';
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+    // SMS consent record: a boolean from the checkbox, plus a server-side
+    // timestamp so we have proof of when consent was given.
+    order.sms_consent = order.sms_consent === true && !!order.phone;
+    if (order.sms_consent) order.sms_consent_at = new Date().toISOString();
+    else delete order.sms_consent_at;
+
+    const insert = (body) => fetch(`${SUPABASE_URL}/rest/v1/orders`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -44,9 +50,24 @@ exports.handler = async (event) => {
         'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
         'Prefer': 'return=representation',
       },
-      body: JSON.stringify(order),
+      body: JSON.stringify(body),
     });
 
+    let res = await insert(order);
+
+    // If the consent columns haven't been added to the table yet, don't lose
+    // the order — save it without them. Fails safe: no consent recorded
+    // means no texts are sent.
+    if (!res.ok) {
+      const errText = await res.text();
+      if (errText.includes('sms_consent')) {
+        console.warn('orders.sms_consent columns missing — saving without consent record');
+        const { sms_consent, sms_consent_at, ...rest } = order;
+        res = await insert(rest);
+      } else {
+        throw new Error(errText);
+      }
+    }
     if (!res.ok) throw new Error(await res.text());
     const saved = await res.json();
     return { statusCode: 200, body: JSON.stringify(saved[0]) };
