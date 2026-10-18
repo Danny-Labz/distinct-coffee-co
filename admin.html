@@ -718,6 +718,61 @@
     html.is-standalone .app-refresh { display: inline-flex; }
     .topbar-right-group { display: flex; align-items: center; gap: 12px; }
     @media (max-width: 600px) { .topbar-right { gap: 10px; } .topbar-right .logout-btn { white-space: nowrap; } }
+
+    /* ── LANDING PAGE EDITOR ── */
+    .lp-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .lp-intro { font-size: 11px; color: #777; line-height: 1.7; max-width: 640px; }
+    .lp-viewlink { text-decoration: none; white-space: nowrap; display: inline-block; }
+    .lp-setup { background: var(--yellow-bg); color: #6b4a00; border-radius: 4px; padding: 14px 16px; font-size: 11px; line-height: 1.7; margin-bottom: 16px; }
+    .lp-card { background: var(--white); border-radius: 4px; margin-bottom: 10px; border: 1px solid var(--border); }
+    .lp-card > summary { list-style: none; cursor: pointer; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+    .lp-card > summary::-webkit-details-marker { display: none; }
+    .lp-card > summary::after { content: '+'; margin-left: auto; font-size: 18px; color: var(--mid); }
+    .lp-card[open] > summary::after { content: '–'; }
+    .lp-title { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+    .lp-badge { font-size: 8px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 7px; border-radius: 2px; background: var(--off-white); color: #888; }
+    .lp-badge.custom { background: var(--green-bg); color: var(--green); }
+    .lp-badge.dirty { background: var(--yellow-bg); color: var(--yellow); }
+    .lp-body { padding: 4px 20px 20px; border-top: 1px solid var(--border); }
+    .lp-hint { font-size: 11px; color: #888; line-height: 1.6; margin: 12px 0 16px; }
+    .lp-field { margin-bottom: 14px; }
+    .lp-field label, .lp-img-label { display: block; font-size: 8.5px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #999; margin-bottom: 6px; }
+    .lp-field input, .lp-field textarea, .lp-alt {
+      width: 100%; box-sizing: border-box; background: var(--off-white); border: 1px solid transparent; border-radius: 2px;
+      padding: 10px 12px; font-family: 'Montserrat', sans-serif; font-size: 12px; color: var(--black); line-height: 1.6; resize: vertical;
+    }
+    .lp-field input:focus, .lp-field textarea:focus, .lp-alt:focus { outline: none; border-color: var(--black); background: #fff; }
+    .lp-fmt { font-size: 10px; color: #aaa; margin-top: 4px; }
+    .lp-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+    .lp-fields .lp-field.wide { grid-column: 1 / -1; }
+    .lp-imgs { margin: 6px 0 18px; padding: 16px; background: var(--off-white); border-radius: 4px; }
+    .lp-img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin: 10px 0 12px; }
+    .lp-thumb { background: var(--white); border-radius: 4px; overflow: hidden; position: relative; }
+    .lp-thumb img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #ddd; }
+    .lp-thumb-num { position: absolute; top: 6px; left: 6px; background: rgba(10,10,10,.7); color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+    .lp-thumb-bar { display: flex; gap: 4px; padding: 6px; }
+    .lp-thumb-bar button { flex: 1; border: 1px solid var(--border); background: var(--white); border-radius: 2px; padding: 7px 0; font-size: 12px; cursor: pointer; }
+    .lp-thumb-bar button:disabled { opacity: .3; cursor: default; }
+    .lp-thumb-bar .lp-del { color: var(--red); }
+    .lp-alt { margin: 0 6px 8px; width: calc(100% - 12px); padding: 6px 8px; font-size: 10px; }
+    .lp-add { display: inline-block; background: var(--black); color: var(--white); font-size: 9px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; padding: 10px 16px; border-radius: 2px; cursor: pointer; }
+    .lp-add.disabled { opacity: .4; pointer-events: none; }
+    .lp-status { font-size: 10px; color: #777; margin-left: 10px; }
+    .lp-actions { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+    .lp-save { background: var(--black); color: var(--white); border: none; font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 12px 22px; border-radius: 2px; cursor: pointer; }
+    .lp-save:disabled { opacity: .5; cursor: default; }
+    .lp-reset { background: none; border: 1px solid var(--border); font-family: 'Montserrat', sans-serif; font-size: 9px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; padding: 11px 16px; border-radius: 2px; cursor: pointer; color: #888; }
+    .lp-msg { font-size: 11px; }
+    .lp-msg.ok { color: var(--green); } .lp-msg.err { color: var(--red); }
+    @media (max-width: 768px) {
+      .lp-toolbar { flex-direction: column; align-items: stretch; }
+      .lp-viewlink { text-align: center; }
+      .lp-fields { grid-template-columns: 1fr; }
+      .lp-field input, .lp-field textarea, .lp-alt { font-size: 16px; }
+      .lp-alt { font-size: 13px; }
+      .lp-body { padding: 4px 14px 16px; }
+      .lp-img-grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
   <script>
     if (window.navigator.standalone) document.documentElement.classList.add('is-standalone');
@@ -779,6 +834,9 @@
       </button>
       <button class="tab" onclick="switchTab('customers', this)">
         Customers
+      </button>
+      <button class="tab" onclick="switchTab('landing', this)">
+        Landing Page
       </button>
     </div>
 
@@ -1331,6 +1389,16 @@
         </div>
       </div>
 
+      <!-- ── LANDING PAGE PANEL ── -->
+      <div class="panel" id="panel-landing">
+        <div class="lp-toolbar">
+          <div class="lp-intro">Edit the wording and photos on the public home page. Changes go live as soon as you save a section. Sections with several photos become a slideshow.</div>
+          <a class="refresh-btn lp-viewlink" href="index.html" target="_blank" rel="noopener">View Live Site ↗</a>
+        </div>
+        <div id="lp-setup-msg" class="lp-setup" style="display:none;"></div>
+        <div id="lp-sections"><div class="loading">Loading…</div></div>
+      </div>
+
       <!-- ── CUSTOMERS PANEL ── -->
       <div class="panel" id="panel-customers">
         <div class="filter-bar">
@@ -1671,6 +1739,7 @@
     </div>
   </div>
 
+  <script src="js/landing-schema.js"></script>
   <script>
     // ─── CONFIG ──────────────────────────────────────────
     const SUPABASE_URL      = 'https://qjsitqvfimwiuoojsoge.supabase.co';
@@ -1687,6 +1756,7 @@
       const pw = document.getElementById('password-input').value;
       if (pw === ADMIN_PASSWORD) {
         sessionStorage.setItem('admin_auth', 'true');
+        sessionStorage.setItem('admin_pw', pw);
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display    = 'block';
         initDashboard();
@@ -1699,6 +1769,7 @@
 
     function logout() {
       sessionStorage.removeItem('admin_auth');
+      sessionStorage.removeItem('admin_pw');
       document.getElementById('dashboard').style.display    = 'none';
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('password-input').value = '';
@@ -1744,6 +1815,10 @@
       if (name === 'customers' && !customersLoadedOnce) {
         customersLoadedOnce = true;
         loadCustomers();
+      }
+      if (name === 'landing' && !lpLoadedOnce) {
+        lpLoadedOnce = true;
+        loadLanding();
       }
     }
 
@@ -3939,6 +4014,223 @@
       document.getElementById('customer-detail-overlay').style.display = 'none';
     }
 
+
+    // ─── LANDING PAGE EDITOR ─────────────────────────────
+    // Text + photos for the public home page. Reads site_content with the
+    // public key; saves/uploads go through admin-site-content (service key).
+    let lpLoadedOnce = false;
+    const lpSaved = {};     // key -> { fields, images:[{url,alt}] } as stored
+    const lpWork  = {};     // key -> in-progress edits { fields, images, removed:[paths] }
+
+    const lpPathOf = url => url.startsWith(LANDING_IMG_BASE) ? url.slice(LANDING_IMG_BASE.length) : null;
+
+    async function lpApi(payload) {
+      let pw = sessionStorage.getItem('admin_pw');
+      if (!pw) {
+        pw = prompt('Re-enter the admin password to continue:');
+        if (!pw) throw new Error('Password required');
+      }
+      const res = await fetch('/.netlify/functions/admin-site-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': pw },
+        body: JSON.stringify(payload),
+      });
+      if (res.status === 401) { sessionStorage.removeItem('admin_pw'); throw new Error('Wrong admin password — try again.'); }
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || `Request failed (${res.status})`);
+      sessionStorage.setItem('admin_pw', pw);
+      return out;
+    }
+
+    async function loadLanding() {
+      const host = document.getElementById('lp-sections');
+      const setup = document.getElementById('lp-setup-msg');
+      setup.style.display = 'none';
+      try {
+        const rows = await supaFetch('site_content?select=key,value');
+        rows.forEach(r => { lpSaved[r.key] = r.value || {}; });
+      } catch (e) {
+        setup.style.display = 'block';
+        setup.innerHTML = '<strong>One-time setup needed.</strong> The <code>site_content</code> table or <code>site-images</code> storage bucket doesn\'t exist yet — run the Landing Page setup SQL in Supabase, then reload this tab. (You can still look around; saving will fail until then.)';
+      }
+      host.innerHTML = '';
+      LANDING_SCHEMA.forEach(sec => host.appendChild(lpBuildSection(sec)));
+    }
+
+    function lpFresh(key) {
+      const v = lpSaved[key] || {};
+      lpWork[key] = {
+        fields: Object.assign({}, v.fields || {}),
+        images: (v.images || []).map(i => ({ url: i.url, alt: i.alt || '' })),
+        removed: [],
+      };
+    }
+
+    function lpIsCustom(key) {
+      const v = lpSaved[key];
+      return !!(v && ((v.images && v.images.length) || Object.values(v.fields || {}).some(x => x && x.trim())));
+    }
+
+    function lpMarkDirty(card, key) {
+      const b = card.querySelector('.lp-badge');
+      b.className = 'lp-badge dirty'; b.textContent = 'Unsaved changes';
+    }
+
+    function lpBuildSection(sec, wasOpen) {
+      const key = sec.key;
+      lpFresh(key);
+      const work = lpWork[key];
+
+      const card = document.createElement('details');
+      card.className = 'lp-card'; card.dataset.key = key;
+      if (wasOpen) card.open = true;
+
+      const sum = document.createElement('summary');
+      const t = document.createElement('span'); t.className = 'lp-title'; t.textContent = sec.label;
+      const badge = document.createElement('span');
+      badge.className = 'lp-badge' + (lpIsCustom(key) ? ' custom' : ''); badge.textContent = lpIsCustom(key) ? 'Customized' : 'Default';
+      sum.append(t, badge); card.appendChild(sum);
+
+      const body = document.createElement('div'); body.className = 'lp-body';
+      if (sec.hint) { const h = document.createElement('div'); h.className = 'lp-hint'; h.textContent = sec.hint; body.appendChild(h); }
+
+      // ── photos ──
+      if (sec.images) {
+        const box = document.createElement('div'); box.className = 'lp-imgs';
+        const lab = document.createElement('div'); lab.className = 'lp-img-label'; lab.textContent = sec.images.label;
+        const hint = document.createElement('div'); hint.className = 'lp-fmt'; hint.textContent = sec.images.hint;
+        const grid = document.createElement('div'); grid.className = 'lp-img-grid';
+        const add = document.createElement('label'); add.className = 'lp-add'; add.textContent = '+ Add photos';
+        const file = document.createElement('input'); file.type = 'file'; file.accept = 'image/*'; file.multiple = true; file.style.display = 'none';
+        add.appendChild(file);
+        const status = document.createElement('span'); status.className = 'lp-status';
+        box.append(lab, hint, grid, add, status);
+        body.appendChild(box);
+
+        const draw = () => {
+          grid.innerHTML = '';
+          work.images.forEach((im, i) => {
+            const th = document.createElement('div'); th.className = 'lp-thumb';
+            const img = document.createElement('img'); img.src = im.url; img.alt = '';
+            const num = document.createElement('span'); num.className = 'lp-thumb-num'; num.textContent = i + 1;
+            const alt = document.createElement('input'); alt.className = 'lp-alt'; alt.placeholder = 'Describe photo (optional)'; alt.value = im.alt;
+            alt.oninput = () => { im.alt = alt.value; lpMarkDirty(card, key); };
+            const bar = document.createElement('div'); bar.className = 'lp-thumb-bar';
+            const mk = (txt, title, fn, dis, cls) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = txt; b.title = title; b.disabled = !!dis; if (cls) b.className = cls; b.onclick = fn; return b; };
+            const move = d => () => { const j = i + d; [work.images[i], work.images[j]] = [work.images[j], work.images[i]]; lpMarkDirty(card, key); draw(); };
+            bar.append(
+              mk('◀', 'Move earlier', move(-1), i === 0),
+              mk('▶', 'Move later', move(1), i === work.images.length - 1),
+              mk('✕', 'Remove photo', () => {
+                const p = lpPathOf(im.url); if (p) work.removed.push(p);
+                work.images.splice(i, 1); lpMarkDirty(card, key); draw();
+              }, false, 'lp-del')
+            );
+            th.append(img, num, bar, alt); grid.appendChild(th);
+          });
+          const full = work.images.length >= sec.images.max;
+          add.classList.toggle('disabled', full);
+          if (full) status.textContent = `Maximum of ${sec.images.max} photos.`;
+          else if (!status.dataset.busy) status.textContent = work.images.length > 1 ? `${work.images.length} photos — shown as a slideshow in this order.` : (work.images.length === 1 ? '1 photo.' : 'No photos — the default look is used.');
+        };
+
+        file.onchange = async () => {
+          const files = [...file.files].slice(0, sec.images.max - work.images.length);
+          file.value = '';
+          status.dataset.busy = '1';
+          let n = 0;
+          for (const f of files) {
+            n++; status.textContent = `Uploading ${n} of ${files.length}…`;
+            try {
+              const b64 = await lpResizeToBase64(f);
+              const out = await lpApi({ action: 'upload', key, data: b64, contentType: 'image/jpeg' });
+              work.images.push({ url: out.url, alt: '' });
+              lpMarkDirty(card, key); draw();
+            } catch (e) {
+              status.textContent = `Upload failed: ${e.message}`; delete status.dataset.busy; return;
+            }
+          }
+          delete status.dataset.busy; draw();
+        };
+        draw();
+      }
+
+      // ── text fields ──
+      const grid = document.createElement('div'); grid.className = 'lp-fields';
+      sec.fields.forEach(f => {
+        const wrap = document.createElement('div');
+        wrap.className = 'lp-field' + (f.type === 'text' ? '' : ' wide');
+        const l = document.createElement('label'); l.textContent = f.label; wrap.appendChild(l);
+        const cur = (typeof work.fields[f.id] === 'string' && work.fields[f.id].trim() !== '') ? work.fields[f.id] : f.def;
+        let el;
+        if (f.type === 'text') { el = document.createElement('input'); el.type = 'text'; }
+        else { el = document.createElement('textarea'); el.rows = f.rows || 3; }
+        el.value = cur; el.dataset.fid = f.id;
+        el.oninput = () => lpMarkDirty(card, key);
+        wrap.appendChild(el);
+        if (f.type === 'title') { const n = document.createElement('div'); n.className = 'lp-fmt'; n.textContent = 'Enter = new line · wrap a word in *stars* to emphasise it'; wrap.appendChild(n); }
+        grid.appendChild(wrap);
+      });
+      body.appendChild(grid);
+
+      // ── actions ──
+      const actions = document.createElement('div'); actions.className = 'lp-actions';
+      const save = document.createElement('button'); save.className = 'lp-save'; save.type = 'button'; save.textContent = 'Save & Publish';
+      const reset = document.createElement('button'); reset.className = 'lp-reset'; reset.type = 'button'; reset.textContent = 'Reset to default';
+      const msg = document.createElement('span'); msg.className = 'lp-msg';
+      actions.append(save, reset, msg); body.appendChild(actions);
+
+      const setMsg = (t, cls) => { msg.textContent = t; msg.className = 'lp-msg ' + (cls || ''); };
+
+      save.onclick = async () => {
+        const fields = {};
+        body.querySelectorAll('[data-fid]').forEach(el => { fields[el.dataset.fid] = el.value; });
+        save.disabled = true; setMsg('Saving…');
+        try {
+          await lpApi({ action: 'save', key, removePaths: work.removed, value: { fields, images: work.images } });
+          lpSaved[key] = { fields, images: work.images.map(i => ({ url: i.url, alt: i.alt })) };
+          const fresh = lpBuildSection(sec, true);
+          card.replaceWith(fresh);
+          const m = fresh.querySelector('.lp-msg'); m.textContent = 'Saved — live on the site now.'; m.className = 'lp-msg ok';
+        } catch (e) { save.disabled = false; setMsg(e.message, 'err'); }
+      };
+
+      reset.onclick = async () => {
+        if (!confirm(`Reset "${sec.label}" to the original wording${sec.images ? ' and remove its photos' : ''}?`)) return;
+        reset.disabled = true; setMsg('Resetting…');
+        try {
+          await lpApi({ action: 'reset', key });
+          delete lpSaved[key];
+          const fresh = lpBuildSection(sec, true);
+          card.replaceWith(fresh);
+          const m = fresh.querySelector('.lp-msg'); m.textContent = 'Back to default.'; m.className = 'lp-msg ok';
+        } catch (e) { reset.disabled = false; setMsg(e.message, 'err'); }
+      };
+
+      card.appendChild(body);
+      return card;
+    }
+
+    // Resize in the browser (max 2000px, JPEG) so phone photos upload fast and stay light.
+    async function lpResizeToBase64(file) {
+      let src, w, h;
+      try { src = await createImageBitmap(file); w = src.width; h = src.height; }
+      catch (e) {
+        src = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('Could not read that image')); i.src = URL.createObjectURL(file); });
+        w = src.naturalWidth; h = src.naturalHeight;
+      }
+      let max = 2000, quality = 0.86, blob;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const scale = Math.min(1, max / Math.max(w, h));
+        const c = document.createElement('canvas'); c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(src, 0, 0, c.width, c.height);
+        blob = await new Promise(r => c.toBlob(r, 'image/jpeg', quality));
+        if (blob && blob.size < 3.2 * 1024 * 1024) break;
+        max = Math.round(max * 0.75); quality = Math.max(0.6, quality - 0.08);
+      }
+      if (!blob) throw new Error('Could not process that image');
+      return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(blob); });
+    }
   </script>
 </body>
 </html>

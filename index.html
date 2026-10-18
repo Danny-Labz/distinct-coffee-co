@@ -1075,6 +1075,40 @@
         height: 18px;
       }
     }
+    /* ── LANDING PAGE CMS: photo carousels + gallery ── */
+    .cms-carousel { position: relative; overflow: hidden; background: var(--off-white); }
+    .cms-slide {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; object-position: center; display: block;
+      opacity: 0; transition: opacity .9s ease; user-select: none; -webkit-user-drag: none;
+    }
+    .cms-slide.on { opacity: 1; }
+    .cms-dots { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: center; gap: 8px; z-index: 2; }
+    .cms-dot {
+      width: 8px; height: 8px; border-radius: 50%; padding: 0; border: 1px solid rgba(248,246,242,0.9);
+      background: rgba(10,10,10,0.25); cursor: pointer; transition: background .2s, transform .2s;
+    }
+    .cms-dot.on { background: var(--white); transform: scale(1.25); }
+    .cms-arrow {
+      position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+      width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+      background: rgba(10,10,10,0.55); color: var(--white); font-size: 18px; line-height: 1;
+      display: flex; align-items: center; justify-content: center; transition: background .2s;
+    }
+    .cms-arrow:hover { background: rgba(10,10,10,0.85); }
+    .cms-prev { left: 14px; } .cms-next { right: 14px; }
+    .hero-right .cms-carousel { flex: 1; min-height: 420px; }
+    .about-visual.has-photos { padding: 0; }
+    .about-visual.has-photos > :not(.cms-carousel) { display: none; }
+    .about-visual.has-photos .cms-carousel { position: absolute; inset: 0; }
+    #gallery { padding: 120px 80px; background: var(--white); scroll-margin-top: 80px; }
+    .gallery-host .cms-carousel { max-width: 1100px; margin: 0 auto; aspect-ratio: 16 / 9; }
+    @media (max-width: 900px) {
+      #gallery { padding: 80px 28px; scroll-margin-top: 250px; }
+      .gallery-host .cms-carousel { aspect-ratio: 4 / 3; }
+      .cms-arrow { width: 38px; height: 38px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .cms-slide { transition: none; } }
   </style>
 </head>
 <body>
@@ -1161,8 +1195,8 @@
   <div class="marquee-section">
     <div class="marquee-track">
       <!-- Repeated for seamless loop -->
-      <span class="marquee-item">Espresso Drinks <span class="marquee-dot"></span> Cold Brew <span class="marquee-dot"></span> Matcha <span class="marquee-dot"></span> Iced Teas <span class="marquee-dot"></span> Corporate Events <span class="marquee-dot"></span> Weddings <span class="marquee-dot"></span> Private Parties <span class="marquee-dot"></span> Sourced Origins <span class="marquee-dot"></span></span>
-      <span class="marquee-item">Espresso Drinks <span class="marquee-dot"></span> Cold Brew <span class="marquee-dot"></span> Matcha <span class="marquee-dot"></span> Iced Teas <span class="marquee-dot"></span> Corporate Events <span class="marquee-dot"></span> Weddings <span class="marquee-dot"></span> Private Parties <span class="marquee-dot"></span> Sourced Origins <span class="marquee-dot"></span></span>
+      <span class="marquee-item" data-cms="marquee.items">Espresso Drinks <span class="marquee-dot"></span> Cold Brew <span class="marquee-dot"></span> Matcha <span class="marquee-dot"></span> Iced Teas <span class="marquee-dot"></span> Corporate Events <span class="marquee-dot"></span> Weddings <span class="marquee-dot"></span> Private Parties <span class="marquee-dot"></span> Sourced Origins <span class="marquee-dot"></span></span>
+      <span class="marquee-item" data-cms="marquee.items">Espresso Drinks <span class="marquee-dot"></span> Cold Brew <span class="marquee-dot"></span> Matcha <span class="marquee-dot"></span> Iced Teas <span class="marquee-dot"></span> Corporate Events <span class="marquee-dot"></span> Weddings <span class="marquee-dot"></span> Private Parties <span class="marquee-dot"></span> Sourced Origins <span class="marquee-dot"></span></span>
     </div>
   </div>
 
@@ -1191,9 +1225,9 @@
   <!-- NO EVENT STATE (hidden by default) -->
   <section id="no-event" style="display:none;">
     <div class="next-event-inner" style="justify-content:center;text-align:center;flex-direction:column;align-items:center;padding:48px 0;gap:16px;">
-      <div class="next-event-label" style="color:rgba(248,246,242,0.4);">Coming Soon</div>
-      <div class="next-event-name" style="font-size:clamp(20px,3vw,28px);opacity:0.9;">Something distinct is brewing.</div>
-      <div class="next-event-meta" style="color:rgba(248,246,242,0.5);font-size:11px;letter-spacing:1.5px;">Stay tuned — our next pop-up is on its way.</div>
+      <div class="next-event-label" data-cms="no_event.label" style="color:rgba(248,246,242,0.4);">Coming Soon</div>
+      <div class="next-event-name" data-cms="no_event.headline" style="font-size:clamp(20px,3vw,28px);opacity:0.9;">Something distinct is brewing.</div>
+      <div class="next-event-meta" data-cms="no_event.message" style="color:rgba(248,246,242,0.5);font-size:11px;letter-spacing:1.5px;">Stay tuned — our next pop-up is on its way.</div>
       <a href="https://instagram.com/distinct.coffeeco" target="_blank" class="next-event-btn" style="margin-top:8px;">Follow @distinct.coffeeco →</a>
     </div>
   </section>
@@ -1201,14 +1235,14 @@
   <!-- HERO -->
   <section id="hero">
     <div class="hero-left">
-      <h1 class="hero-title reveal reveal-delay-1">
+      <h1 class="hero-title reveal reveal-delay-1" data-cms="hero.title">
         Coffee<br><em>crafted</em><br>for every<br>occasion.
       </h1>
-      <p class="hero-desc reveal reveal-delay-2">
+      <p class="hero-desc reveal reveal-delay-2" data-cms="hero.desc">
         Premium espresso drinks, cold brew, matcha, and more — brought directly to your event. Sourced from the finest origins, served with precision.
       </p>
       <div class="hero-actions reveal reveal-delay-3">
-        <a href="order.html" class="btn-primary">Pre-Order for Next Event</a>
+        <a href="order.html" class="btn-primary" data-cms="hero.cta">Pre-Order for Next Event</a>
       </div>
     </div>
     <div class="hero-right">
@@ -1238,26 +1272,26 @@
       <svg class="about-center-bean" viewBox="0 0 80 120"><rect x="4" y="4" width="72" height="112" rx="36" stroke="#0a0a0a" stroke-width="8"/><path d="M40 22 Q58 60 40 98 Q22 60 40 22Z" stroke="#0a0a0a" stroke-width="6" fill="none" stroke-linecap="round"/></svg>
     </div>
     <div class="about-content">
-      <div class="section-eyebrow reveal">Our Story</div>
-      <h2 class="section-title reveal reveal-delay-1">More than<br><em>coffee.</em></h2>
+      <div class="section-eyebrow reveal" data-cms="about.eyebrow">Our Story</div>
+      <h2 class="section-title reveal reveal-delay-1" data-cms="about.title">More than<br><em>coffee.</em></h2>
       <div class="about-body reveal reveal-delay-2">
-        <p>Distinct. Coffee Co. serves handcrafted specialty coffee with an emphasis on quality, simplicity, and connection.</p>
-        <p>From espresso to matcha, every drink is prepared with intention using quality ingredients and a respect for classic coffee traditions. Whether you're grabbing a coffee on the go, sharing a conversation with friends, or taking a quiet moment for yourself, we hope every cup adds something meaningful to your day.</p>
-        <p>We believe every person has a distinct story, and every drink has its own character. Together, those differences create something worth celebrating—a community where everyone belongs.</p>
-        <div style="margin-top:28px;font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--black);padding-top:20px;border-top:1px solid var(--off-white);">Different Stories. One Community.</div>
+        <p data-cms="about.p1">Distinct. Coffee Co. serves handcrafted specialty coffee with an emphasis on quality, simplicity, and connection.</p>
+        <p data-cms="about.p2">From espresso to matcha, every drink is prepared with intention using quality ingredients and a respect for classic coffee traditions. Whether you're grabbing a coffee on the go, sharing a conversation with friends, or taking a quiet moment for yourself, we hope every cup adds something meaningful to your day.</p>
+        <p data-cms="about.p3">We believe every person has a distinct story, and every drink has its own character. Together, those differences create something worth celebrating—a community where everyone belongs.</p>
+        <div data-cms="about.tagline" style="margin-top:28px;font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--black);padding-top:20px;border-top:1px solid var(--off-white);">Different Stories. One Community.</div>
       </div>
       <div class="about-stats reveal reveal-delay-3">
         <div>
-          <div class="stat-num">100%</div>
-          <div class="stat-label">Mobile Setup</div>
+          <div class="stat-num" data-cms="about.s1n">100%</div>
+          <div class="stat-label" data-cms="about.s1l">Mobile Setup</div>
         </div>
         <div>
-          <div class="stat-num">∞</div>
-          <div class="stat-label">Event Types</div>
+          <div class="stat-num" data-cms="about.s2n">∞</div>
+          <div class="stat-label" data-cms="about.s2l">Event Types</div>
         </div>
         <div>
-          <div class="stat-num">1</div>
-          <div class="stat-label">Standard of Quality</div>
+          <div class="stat-num" data-cms="about.s3n">1</div>
+          <div class="stat-label" data-cms="about.s3l">Standard of Quality</div>
         </div>
       </div>
     </div>
@@ -1267,10 +1301,10 @@
   <section id="menu">
     <div class="section-header reveal">
       <div>
-        <div class="section-eyebrow">The Menu</div>
-        <h2 class="section-title">Crafted with<br><em>intention</em></h2>
+        <div class="section-eyebrow" data-cms="menu.eyebrow">The Menu</div>
+        <h2 class="section-title" data-cms="menu.title">Crafted with<br><em>intention</em></h2>
       </div>
-      <p class="section-note" style="color:rgba(248,246,242,0.3)">Menu subject to seasonal updates & sourcing.</p>
+      <p class="section-note" data-cms="menu.note" style="color:rgba(248,246,242,0.3)">Menu subject to seasonal updates & sourcing.</p>
     </div>
     <div class="menu-grid" id="home-menu-grid">
       <!-- Loaded dynamically from Supabase menu_items table -->
@@ -1278,7 +1312,7 @@
         <div class="menu-cat-label">Loading menu...</div>
       </div>
     </div>
-    <p class="menu-note reveal">All drinks available hot or iced · Dairy alternatives available · Custom syrups upon request</p>
+    <p class="menu-note reveal" data-cms="menu.footnote">All drinks available hot or iced · Dairy alternatives available · Custom syrups upon request</p>
   </section>
 
   <!-- SERVICES -->
@@ -1286,17 +1320,17 @@
   <section id="services">
     <div class="section-header reveal">
       <div>
-        <div class="section-eyebrow">What We Offer</div>
-        <h2 class="section-title">Built for your<br><em>event</em></h2>
+        <div class="section-eyebrow" data-cms="services.eyebrow">What We Offer</div>
+        <h2 class="section-title" data-cms="services.title">Built for your<br><em>event</em></h2>
       </div>
-      <p class="section-note">Every setup tailored to your scale and vision.</p>
+      <p class="section-note" data-cms="services.note">Every setup tailored to your scale and vision.</p>
     </div>
     <div class="services-grid">
       <div class="service-card reveal reveal-delay-1">
         <div class="service-number">01</div>
-        <div class="service-name">Corporate<br>Events</div>
-        <p class="service-desc">Keep your team energized and clients impressed. Professional setup with zero friction.</p>
-        <ul class="service-items">
+        <div class="service-name" data-cms="services.c1name">Corporate<br>Events</div>
+        <p class="service-desc" data-cms="services.c1desc">Keep your team energized and clients impressed. Professional setup with zero friction.</p>
+        <ul class="service-items" data-cms="services.c1items">
           <li>Office meetings &amp; all-hands</li>
           <li>Client entertainment</li>
           <li>Launch events &amp; activations</li>
@@ -1305,9 +1339,9 @@
       </div>
       <div class="service-card reveal reveal-delay-2">
         <div class="service-number">02</div>
-        <div class="service-name">Weddings &amp;<br>Celebrations</div>
-        <p class="service-desc">Make your special day unforgettable with a curated coffee experience your guests will talk about.</p>
-        <ul class="service-items">
+        <div class="service-name" data-cms="services.c2name">Weddings &amp;<br>Celebrations</div>
+        <p class="service-desc" data-cms="services.c2desc">Make your special day unforgettable with a curated coffee experience your guests will talk about.</p>
+        <ul class="service-items" data-cms="services.c2items">
           <li>Weddings &amp; receptions</li>
           <li>Rehearsal dinners</li>
           <li>Bridal &amp; baby showers</li>
@@ -1316,9 +1350,9 @@
       </div>
       <div class="service-card reveal reveal-delay-3">
         <div class="service-number">03</div>
-        <div class="service-name">Private &amp;<br>Social</div>
-        <p class="service-desc">From intimate gatherings to large social events, we bring the café experience to you.</p>
-        <ul class="service-items">
+        <div class="service-name" data-cms="services.c3name">Private &amp;<br>Social</div>
+        <p class="service-desc" data-cms="services.c3desc">From intimate gatherings to large social events, we bring the café experience to you.</p>
+        <ul class="service-items" data-cms="services.c3items">
           <li>Birthday &amp; milestone events</li>
           <li>Pop-ups &amp; markets</li>
           <li>Community gatherings</li>
@@ -1328,17 +1362,29 @@
     </div>
   </section>
 
+  <!-- GALLERY — hidden until photos are added in Admin → Landing Page -->
+  <section id="gallery" style="display:none;">
+    <div class="section-header reveal">
+      <div>
+        <div class="section-eyebrow" data-cms="gallery.eyebrow">The Cart</div>
+        <h2 class="section-title" data-cms="gallery.title">Our setup,<br><em>up close</em></h2>
+      </div>
+      <p class="section-note" data-cms="gallery.note">Handbuilt for the road. Ready for your event.</p>
+    </div>
+    <div id="gallery-host" class="gallery-host"></div>
+  </section>
+
   <!-- CONTACT -->
   <section id="contact">
     <div class="contact-wrap">
       <div class="contact-info">
-        <div class="section-eyebrow reveal">Get In Touch</div>
-        <h2 class="contact-tagline reveal reveal-delay-1">Let's make your<br>event <em>distinct.</em></h2>
-        <p class="contact-desc reveal reveal-delay-2">Ready to bring premium coffee to your next event? Fill out the form and we'll get back to you within 24 hours to discuss packages, availability, and customization.</p>
+        <div class="section-eyebrow reveal" data-cms="contact.eyebrow">Get In Touch</div>
+        <h2 class="contact-tagline reveal reveal-delay-1" data-cms="contact.title">Let's make your<br>event <em>distinct.</em></h2>
+        <p class="contact-desc reveal reveal-delay-2" data-cms="contact.desc">Ready to bring premium coffee to your next event? Fill out the form and we'll get back to you within 24 hours to discuss packages, availability, and customization.</p>
         <div class="contact-detail reveal reveal-delay-3">
           <div class="contact-detail-item">
             <span class="contact-detail-label">Email</span>
-            <span class="contact-detail-value">Danny@DistinctCoffeeCo.com</span>
+            <span class="contact-detail-value" data-cms="contact.email">Danny@DistinctCoffeeCo.com</span>
           </div>
           <div class="contact-detail-item">
             <span class="contact-detail-label">Instagram</span>
@@ -1350,7 +1396,7 @@
           </div>
           <div class="contact-detail-item">
             <span class="contact-detail-label">Service</span>
-            <span class="contact-detail-value">Mobile — We come to you</span>
+            <span class="contact-detail-value" data-cms="contact.service">Mobile — We come to you</span>
           </div>
         </div>
       </div>
@@ -1433,7 +1479,7 @@
     </div>
     <div class="footer-bottom">
       <span class="footer-copy">© 2026 Distinct. Coffee Co. — All rights reserved. &nbsp;·&nbsp; <a href="privacy-policy.html" style="color:inherit;opacity:0.7;">Privacy Policy</a> &nbsp;·&nbsp; <a href="terms-of-service.html" style="color:inherit;opacity:0.7;">Terms of Service</a></span>
-      <span class="footer-tagline">Coffee crafted for every occasion.</span>
+      <span class="footer-tagline" data-cms="footer.tagline">Coffee crafted for every occasion.</span>
     </div>
   </footer>
 
@@ -1812,6 +1858,136 @@
       }
     }
 
+  </script>
+  <script src="js/landing-schema.js"></script>
+  <script>
+    // ── LANDING PAGE CONTENT (managed in Admin → Landing Page) ──
+    // Built-in text/photos stay as the fallback; anything saved in the
+    // site_content table overrides them. Last known content is cached so
+    // returning visitors don't see a flash of the defaults.
+    (function () {
+      const LP_URL = 'https://qjsitqvfimwiuoojsoge.supabase.co';
+      const LP_KEY = 'sb_publishable_edpOH0H5-T6E1A5NOjOcnw_ikl5TzTv';
+      const CACHE_KEY = 'landing_content_v1';
+      const SCHEMA = window.LANDING_SCHEMA || [];
+      const applied = new Set();
+
+      const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const fmtTitle = s => esc(s).replace(/\*([^*\n]+)\*/g, '<em>$1</em>').replace(/\r?\n/g, '<br>');
+      const lines = s => String(s).split(/\r?\n/).map(t => t.trim()).filter(Boolean);
+
+      function setField(sec, f, v) {
+        document.querySelectorAll('[data-cms="' + sec.key + '.' + f.id + '"]').forEach(el => {
+          if (sec.key === 'marquee') el.innerHTML = lines(v).map(t => esc(t) + ' <span class="marquee-dot"></span>').join(' ');
+          else if (f.type === 'title') el.innerHTML = fmtTitle(v);
+          else if (f.type === 'lines') el.innerHTML = lines(v).map(t => '<li>' + esc(t) + '</li>').join('');
+          else el.textContent = v;
+        });
+      }
+
+      function mountCarousel(host, images, opt) {
+        const sig = images.map(i => i.url).join('|');
+        if (host._sig === sig) return;           // unchanged — don't restart the slideshow
+        host._sig = sig;
+        const old = host.querySelector(':scope > .cms-carousel');
+        if (old) { clearInterval(old._timer); old.remove(); }
+        host.classList.remove('has-photos');
+        if (!images.length) return;
+
+        const c = document.createElement('div');
+        c.className = 'cms-carousel';
+        images.forEach((im, i) => {
+          const img = new Image();
+          img.className = 'cms-slide' + (i === 0 ? ' on' : '');
+          img.src = im.url; img.alt = im.alt || opt.alt || '';
+          img.loading = i < 3 ? 'eager' : 'lazy'; img.draggable = false;
+          c.appendChild(img);
+        });
+        const slides = [...c.querySelectorAll('.cms-slide')];
+        let idx = 0, dots = [];
+        const go = n => {
+          slides[idx].classList.remove('on'); if (dots[idx]) dots[idx].classList.remove('on');
+          idx = (n + slides.length) % slides.length;
+          slides[idx].classList.add('on'); if (dots[idx]) dots[idx].classList.add('on');
+        };
+        if (slides.length > 1) {
+          const dw = document.createElement('div'); dw.className = 'cms-dots';
+          slides.forEach((_, i) => {
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'cms-dot' + (i === 0 ? ' on' : ''); b.setAttribute('aria-label', 'Photo ' + (i + 1));
+            b.onclick = () => { go(i); restart(); };
+            dots.push(b); dw.appendChild(b);
+          });
+          c.appendChild(dw);
+          if (opt.arrows) {
+            [['cms-prev', '‹', -1, 'Previous photo'], ['cms-next', '›', 1, 'Next photo']].forEach(([cls, ch, d, label]) => {
+              const b = document.createElement('button');
+              b.type = 'button'; b.className = 'cms-arrow ' + cls; b.textContent = ch; b.setAttribute('aria-label', label);
+              b.onclick = () => { go(idx + d); restart(); };
+              c.appendChild(b);
+            });
+          }
+          const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          let paused = false;
+          const restart = () => { clearInterval(c._timer); if (!reduce) c._timer = setInterval(() => { if (!paused) go(idx + 1); }, opt.interval || 5500); };
+          c.addEventListener('mouseenter', () => paused = true);
+          c.addEventListener('mouseleave', () => paused = false);
+          let x0 = null;
+          c.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; paused = true; }, { passive: true });
+          c.addEventListener('touchend', e => {
+            if (x0 !== null) { const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) { go(idx + (dx < 0 ? 1 : -1)); restart(); } }
+            x0 = null; paused = false;
+          });
+          restart();
+        }
+        host.appendChild(c);
+        host.classList.add('has-photos');
+      }
+
+      function applyAll(rows) {
+        const map = {};
+        (rows || []).forEach(r => { map[r.key] = r.value || {}; });
+        SCHEMA.forEach(sec => {
+          const v = map[sec.key] || {};
+          const saved = v.fields || {};
+          sec.fields.forEach(f => {
+            const id = sec.key + '.' + f.id;
+            const val = saved[f.id];
+            if (typeof val === 'string' && val.trim() !== '') { setField(sec, f, val); applied.add(id); }
+            else if (applied.has(id)) { setField(sec, f, f.def); applied.delete(id); }   // edit was removed
+          });
+        });
+        const imgs = k => (map[k] && Array.isArray(map[k].images)) ? map[k].images.filter(i => i && i.url) : [];
+
+        const heroHost = document.querySelector('.hero-right');
+        if (heroHost) {
+          mountCarousel(heroHost, imgs('hero'), { alt: 'Distinct. Coffee Co.' });
+          const orig = heroHost.querySelector('.hero-photo');
+          if (orig) orig.style.display = imgs('hero').length ? 'none' : '';
+        }
+        const aboutHost = document.querySelector('.about-visual');
+        if (aboutHost) mountCarousel(aboutHost, imgs('about'), { alt: 'Distinct. Coffee Co.' });
+
+        const gal = imgs('gallery');
+        const galSec = document.getElementById('gallery');
+        const galHost = document.getElementById('gallery-host');
+        if (galSec && galHost) {
+          galSec.style.display = gal.length ? '' : 'none';
+          mountCarousel(galHost, gal, { arrows: true, interval: 6500, alt: 'Distinct. Coffee Co. cart' });
+        }
+      }
+
+      try { const c = localStorage.getItem(CACHE_KEY); if (c) applyAll(JSON.parse(c)); } catch (e) {}
+
+      fetch(LP_URL + '/rest/v1/site_content?select=key,value', { headers: { apikey: LP_KEY, Authorization: 'Bearer ' + LP_KEY } })
+        .then(r => r.ok ? r.json() : null)
+        .then(rows => {
+          if (!Array.isArray(rows)) return;
+          applyAll(rows);
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify(rows)); } catch (e) {}
+        })
+        .catch(() => {});
+    })();
   </script>
 </body>
 </html>
