@@ -4059,9 +4059,12 @@
 
     function lpFresh(key) {
       const v = lpSaved[key] || {};
+      const sec = LANDING_SCHEMA.find(x => x.key === key);
+      // Nothing saved yet -> start from the photos the site already shows.
+      const imgs = (v.images && v.images.length) ? v.images : ((sec && sec.images && sec.images.defaults) || []);
       lpWork[key] = {
         fields: Object.assign({}, v.fields || {}),
-        images: (v.images || []).map(i => ({ url: i.url, alt: i.alt || '' })),
+        images: imgs.map(i => ({ url: i.url, alt: i.alt || '' })),
         removed: [],
       };
     }
@@ -4112,7 +4115,7 @@
           work.images.forEach((im, i) => {
             const th = document.createElement('div'); th.className = 'lp-thumb';
             const img = document.createElement('img'); img.src = im.url; img.alt = '';
-            const num = document.createElement('span'); num.className = 'lp-thumb-num'; num.textContent = i + 1;
+            const num = document.createElement('span'); num.className = 'lp-thumb-num'; num.textContent = (i + 1) + (lpPathOf(im.url) ? '' : ' · on site now');
             const alt = document.createElement('input'); alt.className = 'lp-alt'; alt.placeholder = 'Describe photo (optional)'; alt.value = im.alt;
             alt.oninput = () => { im.alt = alt.value; lpMarkDirty(card, key); };
             const bar = document.createElement('div'); bar.className = 'lp-thumb-bar';

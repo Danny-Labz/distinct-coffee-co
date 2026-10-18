@@ -27,6 +27,7 @@
       key: 'hero', label: 'Hero (top of page)',
       hint: 'The big headline and photo at the top of the page.',
       images: { label: 'Hero photos', max: 8,
+        defaults: [{ url: 'hero-photo.jpg', alt: 'Distinct. Coffee Co. — Simple. Balanced. Distinct.' }],
         hint: 'Shown beside the headline on desktop. Add more than one and they fade between each other automatically.' },
       fields: [
         { id: 'title', label: 'Headline', type: 'title', rows: 4, def: 'Coffee\n*crafted*\nfor every\noccasion.' },

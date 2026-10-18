@@ -312,12 +312,12 @@
 
     /* ── SCROLL OFFSET — accounts for fixed header height ── */
     #about, #menu, #contact, #next-event, #no-event, #services {
-      scroll-margin-top: 80px; /* desktop */
+      scroll-margin-top: 112px; /* desktop */
     }
 
     /* ── HEADER SPACER ── */
     .header-spacer {
-      height: 72px; /* desktop nav height */
+      height: 105px; /* desktop nav height: 24 + 56 logo + 24 padding + 1 border */
     }
 
     /* ── MARQUEE ── */
@@ -1101,7 +1101,7 @@
     .about-visual.has-photos { padding: 0; }
     .about-visual.has-photos > :not(.cms-carousel) { display: none; }
     .about-visual.has-photos .cms-carousel { position: absolute; inset: 0; }
-    #gallery { padding: 120px 80px; background: var(--white); scroll-margin-top: 80px; }
+    #gallery { padding: 120px 80px; background: var(--white); scroll-margin-top: 112px; }
     .gallery-host .cms-carousel { max-width: 1100px; margin: 0 auto; aspect-ratio: 16 / 9; }
     @media (max-width: 900px) {
       #gallery { padding: 80px 28px; scroll-margin-top: 250px; }

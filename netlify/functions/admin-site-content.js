@@ -22,6 +22,8 @@ const PUBLIC_PREFIX = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
 
 const KEYS = new Set(['marquee', 'hero', 'about', 'menu', 'services', 'gallery', 'contact', 'no_event', 'footer']);
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+// Photos that ship with the site itself (not in storage) — may appear in an image list.
+const BUILTIN_IMAGES = new Set(['hero-photo.jpg']);
 const ALLOWED_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
 const json = (statusCode, obj) => ({ statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
@@ -48,6 +50,10 @@ function cleanValue(v, key) {
   }
   if (v && Array.isArray(v.images)) {
     for (const im of v.images.slice(0, 30)) {
+      if (im && BUILTIN_IMAGES.has(im.url)) {
+        out.images.push({ url: im.url, path: null, builtin: true, alt: typeof im.alt === 'string' ? im.alt.slice(0, 200) : '' });
+        continue;
+      }
       if (!im || typeof im.url !== 'string' || !im.url.startsWith(PUBLIC_PREFIX)) continue;
       const path = im.url.slice(PUBLIC_PREFIX.length);
       if (!path.startsWith(`${key}/`)) continue;
