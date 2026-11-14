@@ -293,6 +293,7 @@
     .btn-explore-arrow { font-size: 16px; transition: transform 0.2s; }
     @keyframes explore-dot { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); } 70% { box-shadow: 0 0 0 9px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
     @keyframes explore-ring { 0% { opacity: 0.9; transform: scale(1); } 80%, 100% { opacity: 0; transform: scale(1.08, 1.28); } }
+    .explore-strip { display: flex; justify-content: center; padding: 28px 24px 8px; }
     .nav-links a.nav-explore { border: 1px solid var(--black); padding: 8px 14px; border-radius: 20px; }
     .nav-links a.nav-explore:hover { background: var(--black); color: var(--white); }
     .nav-links a.nav-explore::after { display: none; }
@@ -1267,6 +1268,11 @@
     </div>
   </section>
 
+  <!-- 3D TOUR ENTRY (right under the event banner) -->
+  <div class="explore-strip">
+    <a href="explore.html" class="btn-explore"><span class="btn-explore-dot" aria-hidden="true"></span><span class="btn-explore-text"><strong>Enter the Cart</strong><small>Walk up &amp; explore in 3D</small></span><span class="btn-explore-arrow" aria-hidden="true">&rarr;</span></a>
+  </div>
+
   <!-- HERO -->
   <section id="hero">
     <div class="hero-left">
@@ -1278,7 +1284,6 @@
       </p>
       <div class="hero-actions reveal reveal-delay-3">
         <a href="order.html" class="btn-primary" data-cms="hero.cta">Pre-Order for Next Event</a>
-        <a href="explore.html" class="btn-explore"><span class="btn-explore-dot" aria-hidden="true"></span><span class="btn-explore-text"><strong>Enter the Cart</strong><small>Walk up &amp; explore in 3D</small></span><span class="btn-explore-arrow" aria-hidden="true">&rarr;</span></a>
       </div>
     </div>
     <div class="hero-right">
