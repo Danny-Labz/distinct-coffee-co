@@ -8,9 +8,10 @@ hotspots that fly the camera in and open an info panel with live content, CTAs a
 scene-engine/
   engine.js          generic: renderer, lights, camera rig, picking, hotspots, panels, tour chips, UI
   engine.css         generic UI skin (re-themable via config.theme)
-  props.js           reusable low-poly prop library (tent, cart, people, trees, bottles, signs…)
-  vendor/            three.module.min.js (r160) + license
-  assets/            logo etc.
+  props-hd.js        photoreal-leaning prop library (PBR materials, real glass, lawn, cart, bar props)
+  props.js           stylized low-poly prop library + shared helpers (canvasTex…)
+  vendor/            three.module.min.js (r160) + the example add-ons used for post-processing
+  assets/            logo, env/*.hdr (lighting panorama), textures/ (see assets/CREDITS.md)
   scenes/
     distinct-coffee.js   ← the ONLY business-specific file
 explore.html         page shell that mounts a scene
@@ -48,9 +49,16 @@ export default {
   id, title,
   ui:     { logo, exit: { label, href }, loading },
   theme:  { bg, accent, font },                       // → --se-* CSS variables
-  world:  { skyTop, horizon, fogNear, fogFar, hemi, envIntensity, exposure,
-            sun: { position, intensity, extent } },
-  camera: { fov, start: { from:[x,y,z], to:[x,y,z] },
+  world:  { hdr: 'path/to/pano.hdr',                 // photographic lighting + reflections + backdrop
+            backgroundBlur, backgroundIntensity, envIntensity, exposure, fog, fogNear, fogFar,
+            sun: { position, color, intensity, extent, far },   // should match the sun in the panorama
+            low: { … } },                             // overrides for the low quality tier
+            // without `hdr` the engine falls back to the stylized sky: { skyTop, horizon, hemi, … }
+  post:   { ao: { radius, intensity }, dof: { aperture, focusAperture, maxblur },
+            bloom: { strength, radius, threshold } }, // high tier only; omit a key or set false to disable
+  quality: 'high' | 'low',                            // optional; default = low on touch devices
+  camera: { fov, start: { from:[x,y,z], to:[x,y,z] }, startPortrait: { from, to },
+            focusPoint: [x,y,z],                       // what depth-of-field keeps sharp while roaming
             bounds: { minX, maxX, minZ, maxZ },        // walkable area
             colliders: [{ minX, maxX, minZ, maxZ }],   // things you can't walk through
             lookYaw, lookPitch, speed },
@@ -59,7 +67,7 @@ export default {
 };
 ```
 
-`ctx` = `{ THREE, props, esc, scene, renderer, camera, engine, data, hotspot(def), animate(fn) }`.
+`ctx` = `{ THREE, props, hd, quality, esc, scene, renderer, camera, engine, data, hotspot(def), animate(fn) }`.
 `animate((dt, t) => …)` registers a per-frame callback. Use `esc()` on any live text you put in panel HTML.
 
 ### Hotspots
@@ -83,7 +91,32 @@ hotspot({
 Inside panel HTML, `<a data-hotspot="events">…</a>` jumps to another hotspot. Helpful classes: `.row`
 (name/price rows), `.tag`, `.event`, `h4`.
 
-### Props (`props.js`)
+### Rendering quality
+
+Two tiers, picked automatically (override with `?quality=high|low` in the URL):
+
+- **high** (desktop): HDR image-based lighting, 4096 soft shadows, ambient occlusion, depth of field that follows
+  the camera's focus, bloom, filmic tone mapping, true refractive glass. If the first ~90 frames average under
+  ~22 fps the engine drops post-processing by itself.
+- **low** (touch devices): same HDR lighting, materials and models; no post-processing, cheaper glass, less grass.
+
+Debug switches: `?off=ao,dof,bloom` (or `?off=post`), `?nodegrade`.
+Objects can opt out of helper passes with `userData.noAO` / `userData.noDofDepth`.
+
+To relight a scene, swap `world.hdr` for another equirectangular `.hdr` (Poly Haven has free CC0 ones — a 1k file
+is plenty) and point `world.sun.position` at the sun in that panorama.
+
+### HD props (`props-hd.js`)
+
+Scenery: `lawn` (photo-textured ground + instanced wind-blown grass), `tree`, `treeLine`, `canopyTent`.
+Bar/cart: `cart` (marble top, acrylic sign on standoffs, casters), `barMat`, `cupStack`, `icedCup`, `pumpBottle`,
+`strawGlass`, `brewPot`, `syrupBottle`, `espressoMachine`, `towelStack`, `pitcher`, `organizer`, `beanJar`,
+`menuDisplay`, `cardStand`, `aFrame`, `pendant`, `plant`.
+Materials: `M.steel()`, `M.marble()`, `M.blackPaint()`, `M.gold()`…, `glass({ liquid })`, `clearShell()`.
+Textures: `marbleTex`, `brushedTex`, `spunTex`, `noiseTex`, `grassTex`.
+For hero objects that must match a real product exactly, load a glTF model instead and add it to the scene the same way.
+
+### Stylized props (`props.js`)
 
 Every builder returns a `THREE.Group`. Scenery: `ground, tree, palm, pavilion, stringLights, popupTent, aFrame, lantern, walkers/stepWalker, person`.
 Cafe: `cart, barMat, can, waterBottle, beanJar, stockPot, kettle, syrupBottle, espressoMachine, bowlAndTowel, speaker, tabletDisplay, loyaltyCard`.
@@ -98,4 +131,4 @@ New business types (salon, bakery, workshop…) mostly need a few new props adde
 - Mobile: panel becomes a bottom sheet; the subject is shifted above it via `camera.setViewOffset`.
 - Falls back to a friendly message (with a link back to the main site) when WebGL is unavailable.
 - Honors `prefers-reduced-motion`.
-- If a device struggles, lower the pixel ratio cap / shadows in `engine.js` (`setupWorld`).
+- If a device struggles it is moved off post-processing automatically; force it with `quality: 'low'` in the config.

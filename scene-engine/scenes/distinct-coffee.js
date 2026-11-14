@@ -1,9 +1,9 @@
 // scene-engine/scenes/distinct-coffee.js
 // ─────────────────────────────────────────────────────────────────────────────
 // The Distinct. Coffee Co. cart, as a customer sees it walking up at an event.
-// Layout mirrors the real setup (white pop-up tent, black cart with marble top,
-// menu display on the left, espresso machine on the right, beans, cold brew pot,
-// syrups, A-frame order sign). Menu / add-ons / events come live from Supabase.
+// Layout mirrors the real setup (white pop-up tent, black cart with marble top and
+// acrylic logo sign, cups, cold brew pot, syrups, espresso machine, caddy, A-frame
+// order sign), rendered with HDR lighting and physically based materials. Menu / add-ons / events come live from Supabase.
 //
 // This file is the *only* business-specific part — copy it to start a new scene.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,6 +98,22 @@ function drawLoyalty(ctx, w, h) {
   for (let i = 0; i < 10; i++) { ctx.beginPath(); ctx.arc(w * 0.14 + (i % 5) * w * 0.18, 92 + Math.floor(i / 5) * 62, 22, 0, 7); ctx.lineWidth = 3; ctx.strokeStyle = '#0a0a0a'; ctx.stroke(); if (i < 4) { ctx.fillStyle = '#0a0a0a'; ctx.beginPath(); ctx.arc(w * 0.14 + (i % 5) * w * 0.18, 92, 12, 0, 7); ctx.fill(); } }
 }
 
+function drawSyrupLabel(ctx, w, h, logo, name, accent) {
+  ctx.fillStyle = '#f3ecdd'; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = accent; ctx.lineWidth = 5; ctx.strokeRect(16, 16, w - 32, h - 32);
+  ctx.lineWidth = 1.5; ctx.strokeRect(26, 26, w - 52, h - 52);
+  if (logo) { const k = 64 / logo.height; ctx.drawImage(logo, w / 2 - (logo.width * k) / 2, 44, logo.width * k, 64); }
+  ctx.fillStyle = accent; ctx.fillRect(w / 2 - 70, 124, 140, 2);
+  ctx.fillStyle = '#1a1612'; ctx.textAlign = 'center';
+  ctx.font = '700 36px Montserrat, sans-serif'; ctx.fillText(name.toUpperCase(), w / 2, 176);
+  ctx.font = '500 15px Montserrat, sans-serif'; ctx.fillStyle = '#6b6156'; ctx.fillText('HOUSE SYRUP', w / 2, 206);
+}
+
+function drawCupLogo(ctx, w, h, logo) {
+  ctx.clearRect(0, 0, w, h);
+  if (logo) { const k = Math.min((w * 0.9) / logo.width, (h * 0.9) / logo.height); ctx.drawImage(logo, (w - logo.width * k) / 2, (h - logo.height * k) / 2, logo.width * k, logo.height * k); }
+}
+
 // ── scene definition ────────────────────────────────────────────────────────
 export default {
   id: 'distinct-coffee',
@@ -110,13 +126,23 @@ export default {
   },
   theme: { bg: '#0a0a0a', accent: '#ffffff', font: "'Montserrat', system-ui, sans-serif" },
 
-  world: { skyTop: 0x86a9d1, horizon: 0xe4e8ec, fogNear: 15, fogFar: 78, hemi: 0.8, envIntensity: 0.75, exposure: 1.0, sun: { position: [4, 9, 6.5], intensity: 2.1, extent: 6.5 } },
+  // photographic lighting: HDR panorama (Poly Haven "Rooitou Park", CC0) + a matching sun
+  world: {
+    hdr: 'scene-engine/assets/env/park.hdr', backgroundBlur: 0.08, backgroundIntensity: 0.55, envIntensity: 1.0, exposure: 1.18,
+    fog: 0xd9e2e6, fogNear: 25, fogFar: 260,
+    hemi: 0.4, hemiSky: 0xfff0dc, hemiGround: 0xd6cfbd,   // warm fill so whites in the shade don't go blue
+    low: { fogNear: 10, fogFar: 95 },            // phones: no depth-of-field, so haze softens the distance instead
+    sun: { position: [-16.8, 9.6, -5.2], color: 0xffe9cc, intensity: 3.4, extent: 6.5, far: 60, bias: -0.0002, normalBias: 0.012 },
+  },
+  post: { ao: { radius: 0.28, intensity: 1 }, dof: { aperture: 0.0016, focusAperture: 0.007, maxblur: 0.015 }, bloom: { strength: 0.2, radius: 0.7, threshold: 1.0 } },
 
   camera: {
-    fov: 58,
-    start: { from: [0.15, 1.62, 3.2], to: [0, 1.2, 0] },
-    bounds: { minX: -3.2, maxX: 3.2, minZ: 1.45, maxZ: 6.5 },
-    colliders: [{ minX: 1.0, maxX: 1.7, minZ: 1.1, maxZ: 1.95 }],   // the A-frame sign
+    fov: 50,
+    start: { from: [0.2, 1.55, 2.85], to: [0, 1.0, 0] },
+    startPortrait: { from: [0.2, 1.6, 3.9], to: [0, 1.12, 0] },
+    focusPoint: [0, 1.05, 0.2],
+    bounds: { minX: -3.4, maxX: 3.4, minZ: 1.5, maxZ: 6.5 },
+    colliders: [{ minX: 1.2, maxX: 1.95, minZ: 1.15, maxZ: 2.05 }],   // the A-frame sign
     lookYaw: 105, lookPitch: 36, speed: 1.7,
   },
 
@@ -132,74 +158,74 @@ export default {
     return { menu, events, addons, logoImg, logoWhite: logoImg ? whiteLogo(logoImg) : null };
   },
 
-  build({ THREE, scene, props: P, data, hotspot, animate }) {
-    const { menu, events, addons, logoWhite } = data;
+  build({ THREE, scene, props: P, hd: H, quality, data, hotspot, animate }) {
+    const { menu, events, addons, logoWhite, logoImg } = data;
     const nextEvent = events && events[0];
     const orderHref = nextEvent ? `order.html?event_id=${nextEvent.id}` : 'order.html';
 
-    // ── ground + backdrop ──
-    scene.add(P.ground(110, 0x78965c));
-    [[-7, -7, 1], [8.5, -9.5, 2], [-12, -3, 3], [14, -6, 4], [-4, -15, 5], [19, -12, 6]].forEach(([x, z, s]) => {
-      const t = P.tree({ height: 4.6 + (s % 3), crown: 2 + (s % 2) * 0.5, seed: s, color: [0x4d7a3f, 0x5b8a46, 0x45703a][s % 3] }); t.position.set(x, 0, z); scene.add(t);
-    });
-    [[10, -3, 3], [-9.5, -9, 5], [6, -12.5, 8]].forEach(([x, z, s]) => { const p = P.palm({ height: 6 + (s % 3), seed: s }); p.position.set(x, 0, z); scene.add(p); });
-    const pav = P.pavilion(); pav.position.set(2, 0, -16); scene.add(pav);
-    scene.add(P.stringLights([[-4, 3.6, -13.2], [-1.5, 3.6, -13.2], [1.5, 3.6, -13.2], [4.2, 3.6, -13.2], [6.4, 3.6, -13.2]], { sag: 0.3, bulbs: 10 }));
-    [[-6.5, -10.5, 0x2d6cdf], [7, -9.5, 0xf4f5f7], [-2.8, -12.2, 0xe9742a], [11.5, -10.5, 0x2d6cdf]].forEach(([x, z, c]) => {
-      const t = P.popupTent({ w: 3, d: 3, canopy: c }); t.position.set(x, 0, z); t.scale.setScalar(0.9); scene.add(t);
-    });
-    const crowd = P.walkers(13, { bounds: { x: [-14, 14], z: [-13, -4.2] } });
-    crowd.forEach(p => scene.add(p));
-    animate((dt, t) => crowd.forEach(p => P.stepWalker(p, dt, t)));
+    // ── lawn + trees (the HDR panorama supplies sky, horizon and light) ──
+    const tl = new THREE.TextureLoader();
+    const lawn = H.lawn({ map: tl.load('scene-engine/assets/textures/grass.jpg'), normalMap: tl.load('scene-engine/assets/textures/grass-nm.jpg'), tint: 0xe6dcc0, exclude: [{ minX: -1.2, maxX: 1.2, minZ: -0.48, maxZ: 0.48 }, { minX: 1.25, maxX: 1.9, minZ: 1.25, maxZ: 1.95 }] });
+    scene.add(lawn.group);
+    animate((dt, t) => lawn.update(t));
+    // individual trees only where depth-of-field can blur them; phones get the hazy tree line alone
+    if (quality === 'high') [[-16, -30, 15, 6.5], [-2, -38, 17, 7.5], [13, -31, 15, 6.5], [27, -25, 16, 7], [40, -30, 17, 7.5], [-33, -30, 16, 7], [-42, -14, 17, 7.5], [44, -10, 16, 7], [-30, 16, 16, 7], [33, 15, 15, 6.5], [3, -52, 18, 8], [-21, -48, 17, 7.5], [24, -48, 17, 7.8]]
+      .forEach(([x, z, h, c], i) => { const t = H.tree({ height: h, crown: c, seed: i + 2, leaf: [0x5c8a38, 0x6a9840, 0x507c32][i % 3] }); t.position.set(x, 0, z); t.rotation.y = i * 1.7; scene.add(t); });
+
+    scene.add(H.treeLine({ near: 52, far: 85, count: 260 }));
 
     // ── tent + cart ──
-    const tent = P.popupTent({ w: 3.2, d: 3.0 }); tent.position.set(0, 0, -0.35); scene.add(tent);
+    const tent = H.canopyTent({ w: 3.5, d: 3.0 }); tent.position.set(0, 0, -0.3); scene.add(tent);
 
     const signTex = P.canvasTex(1024, 640, (c, w, h) => drawSign(c, w, h, logoWhite));
-    const cart = P.cart({ width: 2.0, depth: 0.75, signTexture: signTex });
+    const cart = H.cart({ width: 2.2, depth: 0.75, signTexture: signTex });
     scene.add(cart);
     const Y = cart.userData.topY;
 
     const put = (obj, x, z, ry = 0, y = Y) => { obj.position.set(x, y, z); obj.rotation.y = ry; scene.add(obj); return obj; };
 
-    // menu display (left)
-    put(P.barMat(0.72, 0.24), -0.58, 0.2);
+    // left: iced drink, cups, sanitizer, straws, plant
+    const service = new THREE.Group(); service.position.y = Y; scene.add(service);
+    const sm = H.barMat(0.17, 0.17); sm.position.set(-1.02, 0, 0.28); service.add(sm);
+    const iced = H.icedCup({ logoTexture: logoImg ? P.canvasTex(512, 256, (c, w, h) => drawCupLogo(c, w, h, logoImg)) : null }); iced.position.set(-1.02, 0.0075, 0.28); iced.rotation.y = 0.15; service.add(iced);
+    const stack = H.cupStack(); stack.position.set(-0.9, 0, 0.06); service.add(stack);
+    put(H.pumpBottle(), -1.06, 0.0, 0.5);
+    put(H.strawGlass(), -0.77, -0.1);
+    put(H.plant(), -1.0, -0.27, 0.6);
+
+    // menu display on a bar mat
+    put(H.barMat(0.62, 0.2), -0.4, 0.3);
     const screenTex = P.canvasTex(1024, 640, (c, w, h) => drawMenuScreen(c, w, h, logoWhite, menu));
-    const tablet = put(P.tabletDisplay({ screen: screenTex }), -0.62, 0.2, 0.02, Y + 0.008);
-    // loyalty card
-    const lcard = put(P.loyaltyCard({ texture: P.canvasTex(512, 320, drawLoyalty) }), -0.96, 0.26, 0.2);
-    // cans + water
-    put(P.can(0x2fa24a), -0.26, 0.22); put(P.can(0xd2262d), -0.18, 0.23); put(P.waterBottle(), -0.095, 0.22);
-    // beans, kettle, cold brew
-    const jar = put(P.beanJar({ labelTexture: P.canvasTex(256, 320, drawBeanLabel) }), 0.06, 0.05);
-    put(P.kettle(), -0.13, -0.17, 0.6);
-    const pot = put(P.stockPot(), 0.32, -0.02);
-    // espresso machine + bowl/towel + speaker + syrups
-    const machine = put(P.espressoMachine(), 0.7, -0.03);
-    put(P.bowlAndTowel(), 0.7, -0.03, 0.3, Y + 0.39);
-    put(P.speaker(), 0.5, 0.29);
-    const syrups = new THREE.Group();
-    const s1 = P.syrupBottle(), s2 = P.syrupBottle({ glass: 0x23130d });
-    s1.position.set(0.94, 0, 0.1); s2.position.set(0.9, 0, -0.06);
-    syrups.add(s1, s2); syrups.position.y = Y; scene.add(syrups);
+    const tablet = put(H.menuDisplay({ screen: screenTex }), -0.4, 0.06, 0.02);
+    const lcard = put(H.cardStand({ texture: P.canvasTex(512, 320, drawLoyalty) }), -0.02, 0.31, 0.12);
 
-    // barista behind the counter
-    const barista = P.person({ shirt: 0x151515, pants: 0x20232b, skin: 0xc79876, hair: 0x17110d, beard: true, arms: 'counter' });
-    barista.position.set(-0.12, 0, -0.5); scene.add(barista);
+    // beans + cold brew
+    const jar = put(H.beanJar({ labelTexture: P.canvasTex(256, 320, drawBeanLabel) }), -0.1, -0.03);
+    const pot = put(H.brewPot({ lidAngle: -0.5 }), 0.2, -0.07);
 
-    // A-frame + lantern
-    const aframe = P.aFrame({ face: P.canvasTex(512, 800, (c, w, h) => drawChalk(c, w, h)) });
-    aframe.position.set(1.35, 0, 1.5); aframe.rotation.y = -0.5; scene.add(aframe);
-    const lantern = P.lantern(); lantern.position.set(0, 2.38, -0.3); scene.add(lantern);
-    scene.add(P.rod([0, 2.75, -0.3], [0, 2.43, -0.3], 0.004, P.mat(0x222222)));
-    const warm = new THREE.PointLight(0xffe2b0, 0.9, 5, 2); warm.position.set(0, 2.2, -0.3); scene.add(warm);
+    // syrups
+    const syrups = new THREE.Group(); syrups.position.y = Y; scene.add(syrups);
+    [['Vanilla', 0xe2b24a, '#a8842c', 0.42, 0.2], ['Caramel', 0xc67a1e, '#a35a14', 0.505, 0.215], ['Hazelnut', 0x5a2a10, '#5a2a10', 0.59, 0.2]].forEach(([name, liquid, accent, x, z], i) => {
+      const b = H.syrupBottle({ liquid, labelTexture: P.canvasTex(512, 256, (c, w, h) => drawSyrupLabel(c, w, h, logoImg, name, accent)) });
+      b.position.set(x, 0, z); b.rotation.y = (i - 1) * -0.12; syrups.add(b);
+    });
+
+    // espresso machine + caddy
+    const machine = put(H.espressoMachine(), 0.72, -0.03);
+    put(H.organizer(), 1.02, 0.0, -0.06);
+
+    // A-frame + pendant light
+    const aframe = H.aFrame({ face: P.canvasTex(512, 800, (c, w, h) => drawChalk(c, w, h)) });
+    aframe.position.set(1.55, 0, 1.6); aframe.rotation.y = -0.5; scene.add(aframe);
+    const lantern = H.pendant({ drop: 0.33 }); lantern.position.set(0, 2.35, -0.3); scene.add(lantern);
+    const warm = new THREE.PointLight(0xffdfb0, 0.5, 4, 2); warm.position.set(0, 2.3, -0.3); scene.add(warm);
 
     // ─────────────── hotspots (tour order) ───────────────
     const row = (name, sub, price) => `<div class="row"><div><b>${esc(name)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div>${price ? `<span class="p">${esc(price)}</span>` : ''}</div>`;
 
     hotspot({
-      id: 'menu', label: 'The Menu', object: tablet, marker: [-0.62, Y + 0.36, 0.22],
-      focus: { from: [-0.6, Y + 0.36, 0.92], to: [-0.62, Y + 0.18, 0.2], fov: 42 },
+      id: 'menu', label: 'The Menu', object: tablet, marker: [-0.4, Y + 0.37, 0.06],
+      focus: { from: [-0.4, Y + 0.33, 0.8], to: [-0.4, Y + 0.17, 0.05], fov: 40 },
       panel: {
         eyebrow: 'The Menu', title: 'Crafted with intention',
         html: () => {
@@ -213,8 +239,8 @@ export default {
     });
 
     hotspot({
-      id: 'espresso', label: 'Espresso', object: machine, marker: [0.7, Y + 0.5, 0.0],
-      focus: { from: [0.52, Y + 0.36, 1.05], to: [0.7, Y + 0.2, -0.03], fov: 40 },
+      id: 'espresso', label: 'Espresso', object: machine, marker: [0.74, Y + 0.5, 0.0],
+      focus: { from: [0.5, Y + 0.36, 1.05], to: [0.7, Y + 0.2, -0.03], fov: 38 },
       panel: {
         eyebrow: 'The Espresso', title: 'Pulled fresh, made to order',
         html: () => '<p>Every drink starts with a freshly pulled shot. Espresso drinks prepared with intention, quality ingredients and a respect for classic coffee traditions — right at your event.</p><p>Lattes, cappuccinos, americanos, cortados and more, hot or iced.</p><p><a href="#" data-hotspot="menu" style="color:#0a0a0a">See everything on the menu →</a></p>',
@@ -223,8 +249,8 @@ export default {
     });
 
     hotspot({
-      id: 'beans', label: 'The Beans', object: jar, marker: [0.06, Y + 0.34, 0.05],
-      focus: { from: [0.1, Y + 0.28, 0.8], to: [0.06, Y + 0.14, 0.05], fov: 38 },
+      id: 'beans', label: 'The Beans', object: jar, marker: [-0.1, Y + 0.34, -0.03],
+      focus: { from: [-0.06, Y + 0.27, 0.74], to: [-0.1, Y + 0.13, -0.03], fov: 36 },
       panel: {
         eyebrow: 'The Beans', title: 'Harmony Blend',
         html: () => '<p>The beans in our jar: a medium-dark roast of coffees from Colombia, Brazil and Nicaragua.</p><div style="margin:14px 0 6px"><span class="tag">Milk chocolate</span><span class="tag">Stone fruit</span><span class="tag">Hazelnut</span></div><h4>Origins</h4><p>Colombia · Brazil · Nicaragua</p><h4>Roast</h4><p>Medium dark</p>',
@@ -233,8 +259,8 @@ export default {
     });
 
     hotspot({
-      id: 'coldbrew', label: 'Cold Brew', object: pot, marker: [0.32, Y + 0.3, -0.02],
-      focus: { from: [0.38, Y + 0.34, 0.82], to: [0.32, Y + 0.1, -0.02], fov: 40 },
+      id: 'coldbrew', label: 'Cold Brew', object: pot, marker: [0.2, Y + 0.3, -0.07],
+      focus: { from: [0.16, Y + 0.36, 0.9], to: [0.16, Y + 0.12, 0.0], fov: 40 },
       panel: {
         eyebrow: 'Cold Brew & Iced', title: 'Made for warm days',
         html: () => '<p>Cold brew, iced lattes, matcha and iced teas — all poured cold for outdoor markets and warm afternoons.</p><div style="margin-top:12px"><span class="tag">Cold brew</span><span class="tag">Matcha</span><span class="tag">Iced teas</span><span class="tag">Refreshers</span></div>',
@@ -243,8 +269,8 @@ export default {
     });
 
     hotspot({
-      id: 'syrups', label: 'Syrups & Milks', object: syrups, marker: [0.92, Y + 0.38, 0.02],
-      focus: { from: [0.8, Y + 0.36, 0.85], to: [0.92, Y + 0.14, 0.02], fov: 38 },
+      id: 'syrups', label: 'Syrups & Milks', object: syrups, marker: [0.505, Y + 0.42, 0.2],
+      focus: { from: [0.46, Y + 0.3, 0.95], to: [0.505, Y + 0.16, 0.2], fov: 36 },
       panel: {
         eyebrow: 'Make it yours', title: 'Syrups & milks',
         html: () => {
@@ -260,7 +286,7 @@ export default {
 
     hotspot({
       id: 'story', label: 'Our Story', object: cart.userData.plate, hitPad: 0.04,
-      focus: { from: [0, 0.98, 2.1], to: [0, 0.5, 0.4], fov: 46 },
+      focus: { from: [0, 0.95, 2.25], to: [0, 0.56, 0.4], fov: 44 },
       panel: {
         eyebrow: 'Our Story', title: 'More than coffee.',
         html: () => '<p>Distinct. Coffee Co. serves handcrafted specialty coffee with an emphasis on quality, simplicity, and connection.</p><p>We believe every person has a distinct story, and every drink has its own character. Together, those differences create something worth celebrating — a community where everyone belongs.</p><p><b style="color:#0a0a0a;letter-spacing:2px;font-size:10px">DIFFERENT STORIES. ONE COMMUNITY.</b></p>',
@@ -269,8 +295,8 @@ export default {
     });
 
     hotspot({
-      id: 'events', label: 'Find Us', object: lantern, marker: [0, 2.58, -0.3], hitPad: 0.18,
-      focus: { from: [0, 1.55, 1.9], to: [0, 2.3, -0.3], fov: 52 },
+      id: 'events', label: 'Find Us', object: lantern, marker: [0, 2.52, -0.3], hitPad: 0.14,
+      focus: { from: [0, 1.55, 1.9], to: [0, 2.32, -0.3], fov: 50 },
       panel: {
         eyebrow: 'Where we’ll be', title: events.length ? 'Upcoming events' : 'Something distinct is brewing',
         html: () => events.length
@@ -281,8 +307,8 @@ export default {
     });
 
     hotspot({
-      id: 'order', label: 'Order Ahead', object: aframe, marker: [1.35, 1.0, 1.5],
-      focus: { from: [0.95, 0.9, 2.75], to: [1.33, 0.5, 1.5], fov: 44 },
+      id: 'order', label: 'Order Ahead', object: aframe, marker: [1.55, 1.05, 1.6],
+      focus: { from: [1.1, 0.9, 2.9], to: [1.52, 0.5, 1.6], fov: 44 },
       panel: {
         eyebrow: 'Skip the line', title: 'Order ahead',
         html: () => '<p>Pre-order for an upcoming event and pay online, or reserve and pay at the event. At the cart, scan the QR code to order and pay from your phone — then we’ll call your name.</p>',
@@ -291,8 +317,8 @@ export default {
     });
 
     hotspot({
-      id: 'loyalty', label: 'Rewards', object: lcard, marker: [-0.96, Y + 0.14, 0.26], hitPad: 0.05,
-      focus: { from: [-0.86, Y + 0.3, 0.8], to: [-0.96, Y + 0.07, 0.26], fov: 34 },
+      id: 'loyalty', label: 'Rewards', object: lcard, marker: [-0.02, Y + 0.15, 0.31], hitPad: 0.04,
+      focus: { from: [0.04, Y + 0.26, 0.82], to: [-0.02, Y + 0.06, 0.31], fov: 32 },
       panel: {
         eyebrow: 'Rewards', title: 'Every drink counts',
         html: () => '<p>Join our loyalty card when you order — with just your email or phone number. Every drink earns a punch, and when your card is full a drink is on us.</p>',
@@ -301,8 +327,8 @@ export default {
     });
 
     hotspot({
-      id: 'book', label: 'Book Us', object: barista, marker: [-0.12, 1.98, -0.5], hitPad: 0.05,
-      focus: { from: [0.05, 1.6, 1.35], to: [-0.12, 1.42, -0.5], fov: 40 },
+      id: 'book', label: 'Book Us', object: service, marker: [-0.9, Y + 0.48, 0.06], hitPad: 0.02,
+      focus: { from: [-0.86, Y + 0.36, 1.0], to: [-0.95, Y + 0.16, 0.15], fov: 38 },
       panel: {
         eyebrow: 'Catering', title: 'Your event, our cart',
         html: () => '<p>We bring the café to you. Mobile setup, full bar, zero friction.</p><div style="margin:12px 0"><span class="tag">Corporate events</span><span class="tag">Weddings &amp; celebrations</span><span class="tag">Private &amp; social</span><span class="tag">Family events</span><span class="tag">Pop-ups &amp; markets</span></div><p>Tell us about your event and we’ll reply within 24 hours with packages and availability.</p>',

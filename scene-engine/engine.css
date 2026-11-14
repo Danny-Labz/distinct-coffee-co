@@ -51,8 +51,9 @@
 /* ── tour chips ── */
 .se-chips {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; gap: 8px; padding: 14px 22px 22px; overflow-x: auto; scrollbar-width: none;
-  background: linear-gradient(0deg, rgba(10,10,10,.5), rgba(10,10,10,0)); justify-content: center;
+  background: linear-gradient(0deg, rgba(10,10,10,.5), rgba(10,10,10,0));
 }
+.se-chip:first-child { margin-left: auto; } .se-chip:last-child { margin-right: auto; }   /* centred, but still scrollable when it overflows */
 .se-chips::-webkit-scrollbar { display: none; }
 .se-chip {
   flex: 0 0 auto; font-family: inherit; font-size: 9px; font-weight: 600; letter-spacing: 1.8px; text-transform: uppercase; cursor: pointer;
@@ -127,7 +128,7 @@
   .se-panel.open { transform: none; }
   .se-title { font-size: 22px; margin-bottom: 12px; }
   .se-panel-body { padding: 18px 20px 22px; }
-  .se-chips { justify-content: flex-start; padding: 12px 14px 16px; }
+  .se-chips { padding: 12px 14px 16px; }
   .se-hint { bottom: 74px; font-size: 9px; padding: 9px 14px; }
   .se-focus .se-chips { opacity: 0; pointer-events: none; }
   .se-focus .se-panel { bottom: 16px; max-height: 50vh; }

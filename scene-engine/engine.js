@@ -15,6 +15,14 @@
 import * as THREE from './vendor/three.module.min.js';
 import { createSky } from './props.js';
 import * as props from './props.js';
+import * as hd from './props-hd.js';
+import { RGBELoader } from './vendor/jsm/loaders/RGBELoader.js';
+import { EffectComposer } from './vendor/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
+import { GTAOPass } from './vendor/jsm/postprocessing/GTAOPass.js';
+import { BokehPass } from './vendor/jsm/postprocessing/BokehPass.js';
+import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -70,7 +78,12 @@ export class SceneEngine {
     if (!this.renderer.getContext()) return this.showFallback();
 
     const r = this.renderer;
-    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.coarse ? 1.5 : 2));
+    // quality tier: 'high' = HDR lighting + post-processing + real glass; 'low' = phones / weak GPUs
+    const q = new URLSearchParams(location.search).get('quality');
+    this.quality = q === 'low' || q === 'high' ? q : (this.cfg.quality || (this.coarse ? 'low' : 'high'));
+    hd.setQuality(this.quality);
+    this.maxDpr = 1.5;
+    r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.maxDpr));
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = this.cfg.world?.exposure ?? 1.0;
@@ -81,7 +94,7 @@ export class SceneEngine {
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(this.cfg.camera?.fov ?? 55, 1, 0.05, 200);
-    this.setupWorld();
+    try { await this.setupWorld(); } catch (e) { console.error('[scene] world setup failed', e); return this.showFallback(); }
 
     this.data = {};
     const ctx = this.makeContext();
@@ -96,6 +109,7 @@ export class SceneEngine {
     this.buildChips();
     this.placeStart();
     this.bind();
+    this.setupPost();
     this.resize();
     this.clock.start();
     r.setAnimationLoop(() => this.frame());
@@ -107,20 +121,50 @@ export class SceneEngine {
 
   makeContext() {
     return {
-      THREE, props, esc, scene: this.scene, renderer: this.renderer, camera: this.camera, engine: this, data: this.data,
+      THREE, props, hd, quality: this.quality, esc, scene: this.scene, renderer: this.renderer, camera: this.camera, engine: this, data: this.data,
       hotspot: def => this.addHotspot(def),
       animate: fn => this.animators.push(fn),
     };
   }
 
-  setupWorld() {
-    const w = this.cfg.world || {};
+  async setupWorld() {
+    // world.low = overrides applied on the low quality tier (e.g. more haze to stand in for depth of field)
+    const w = { ...(this.cfg.world || {}), ...(this.quality === 'low' ? this.cfg.world?.low : null) };
     const sc = this.scene;
+    const s = w.sun || {};
+    const sun = new THREE.DirectionalLight(s.color ?? 0xfff3df, s.intensity ?? 2.1);
+    sun.position.set(...(s.position ?? [6, 11, 7]));
+    sun.castShadow = true;
+    const size = this.quality === 'high' ? 4096 : 2048;
+    sun.shadow.mapSize.set(size, size);
+    const e = s.extent ?? 9;
+    Object.assign(sun.shadow.camera, { left: -e, right: e, top: e, bottom: -e, near: 1, far: s.far ?? 40 });
+    sun.shadow.bias = s.bias ?? -0.0004; sun.shadow.normalBias = s.normalBias ?? 0.02;
+    if (s.radius) sun.shadow.radius = s.radius;
+    sc.add(sun);
+    this.sun = sun;
+
+    if (w.hdr) {
+      // photographic image-based lighting: an HDR panorama lights and reflects in everything
+      const tex = await new RGBELoader().loadAsync(w.hdr);
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      const pm = new THREE.PMREMGenerator(this.renderer);
+      const env = pm.fromEquirectangular(tex).texture;
+      pm.dispose(); tex.dispose();
+      sc.environment = env;
+      sc.background = env;
+      sc.backgroundBlurriness = w.backgroundBlur ?? 0.12;
+      sc.backgroundIntensity = w.backgroundIntensity ?? 1;
+      this.envIntensity = w.envIntensity ?? 1;
+      if (w.fogFar) sc.fog = new THREE.Fog(w.fog ?? 0xcfd8cf, w.fogNear ?? 30, w.fogFar);
+      if (w.hemi) sc.add(new THREE.HemisphereLight(w.hemiSky ?? 0xdfe9f5, w.hemiGround ?? 0x7d8a6a, w.hemi));
+      return;
+    }
+
+    // legacy stylized sky (no HDR file)
     sc.background = new THREE.Color(w.horizon ?? 0xe6e9ec);
     sc.fog = new THREE.Fog(w.fog ?? w.horizon ?? 0xe6e9ec, w.fogNear ?? 14, w.fogFar ?? 70);
-    const sky = createSky(w.skyTop ?? 0x9db8d4, w.horizon ?? 0xe6e9ec);
-    sc.add(sky);
-    // procedural environment so metal/glass/marble pick up soft reflections
+    sc.add(createSky(w.skyTop ?? 0x9db8d4, w.horizon ?? 0xe6e9ec));
     const pm = new THREE.PMREMGenerator(this.renderer);
     const envScene = new THREE.Scene();
     envScene.add(createSky(w.skyTop ?? 0x9db8d4, w.horizon ?? 0xe6e9ec, 40));
@@ -131,20 +175,58 @@ export class SceneEngine {
     sc.environment = pm.fromScene(envScene, 0.03).texture;
     this.envIntensity = w.envIntensity ?? 0.7;
     pm.dispose();
-
     sc.add(new THREE.HemisphereLight(w.hemiSky ?? 0xdfe9f5, w.hemiGround ?? 0x7d8a6a, w.hemi ?? 0.75));
-    const s = w.sun || {};
-    const sun = new THREE.DirectionalLight(s.color ?? 0xfff3df, s.intensity ?? 2.1);
-    const p = s.position ?? [6, 11, 7];
-    sun.position.set(...p);
-    sun.castShadow = true;
-    const size = this.coarse ? 1024 : 2048;
-    sun.shadow.mapSize.set(size, size);
-    const e = s.extent ?? 9;
-    Object.assign(sun.shadow.camera, { left: -e, right: e, top: e, bottom: -e, near: 1, far: 40 });
-    sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
-    sc.add(sun);
-    this.sun = sun;
+  }
+
+  /** Post-processing (high tier only): ambient occlusion, depth of field, bloom, filmic output. */
+  setupPost() {
+    const qs = new URLSearchParams(location.search), off = (qs.get('off') || '').split(',');      // ?off=ao,dof,bloom for debugging
+    const p = this.cfg.post && { ...this.cfg.post };
+    if (!p || this.quality !== 'high' || off.includes('post')) return;
+    off.forEach(k => { if (k) p[k] = false; });
+    const r = this.renderer;
+    const size = r.getDrawingBufferSize(new THREE.Vector2());
+    const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
+    const c = new EffectComposer(r, rt);
+    // objects can opt out of the helper passes: userData.noAO (thin/grazing surfaces, grass) and userData.noDofDepth
+    const skipping = (pass, flag) => {
+      const list = []; this.scene.traverse(o => { if (o.userData && o.userData[flag]) list.push(o); });
+      if (!list.length) return;
+      const render = pass.render.bind(pass);
+      pass.render = (...a) => { const was = list.map(o => o.visible); list.forEach(o => { o.visible = false; }); render(...a); list.forEach((o, i) => { o.visible = was[i]; }); };
+    };
+    c.addPass(new RenderPass(this.scene, this.camera));
+    if (p.ao !== false) {
+      const ao = new GTAOPass(this.scene, this.camera, size.x, size.y);
+      ao.updateGtaoMaterial({ radius: p.ao?.radius ?? 0.3, distanceExponent: 1.5, thickness: 1.2, scale: p.ao?.scale ?? 1.15, samples: 12, screenSpaceRadius: false });
+      ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+      ao.blendIntensity = p.ao?.intensity ?? 1;
+      skipping(ao, 'noAO');
+      c.addPass(ao); this.aoPass = ao;
+    }
+    if (p.dof !== false) {
+      this.dof = Object.assign({ aperture: 0.00055, focusAperture: 0.0035, maxblur: 0.0075 }, p.dof === true ? {} : p.dof || {});
+      const bk = new BokehPass(this.scene, this.camera, { focus: 3, aperture: this.dof.aperture, maxblur: this.dof.maxblur });
+      skipping(bk, 'noDofDepth');
+      c.addPass(bk); this.bokeh = bk;
+      this.dofState = { focus: 3, aperture: this.dof.aperture };
+    }
+    if (p.bloom !== false) {
+      const b = p.bloom || {};
+      c.addPass(new UnrealBloomPass(new THREE.Vector2(size.x, size.y), b.strength ?? 0.22, b.radius ?? 0.7, b.threshold ?? 1.0));
+    }
+    c.addPass(new OutputPass());
+    this.composer = c;
+    this.perf = qs.has('nodegrade') ? null : { n: 0, t: 0 };
+  }
+
+  /** Drop to plain rendering if the device can't keep up. */
+  degrade() {
+    if (!this.composer) return;
+    console.info('[scene] low frame rate — switching off post-processing');
+    this.composer.dispose?.(); this.composer = null; this.bokeh = null;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+    this.resize();
   }
 
   // ───────────────────────────── hotspots ─────────────────────────────
@@ -220,7 +302,8 @@ export class SceneEngine {
   // ───────────────────────────── camera ─────────────────────────────
   placeStart() {
     const c = this.cfg.camera || {};
-    const s = c.start || { from: [0, 1.6, 3], to: [0, 1.2, 0] };
+    const portrait = window.innerHeight > window.innerWidth * 1.15;
+    const s = (portrait && c.startPortrait) || c.start || { from: [0, 1.6, 3], to: [0, 1.2, 0] };
     const pose = poseLook(s.from, s.to, c.fov ?? 55);
     Object.assign(this.cam, pose);
     this.base.yaw = pose.yaw;
@@ -328,7 +411,24 @@ export class SceneEngine {
 
     this.applyCamera();
     this.updateMarkers();
-    this.renderer.render(this.scene, this.camera);
+    if (this.composer) {
+      if (this.bokeh) {
+        // focus on whatever the visitor is looking at: the active hotspot, else the scene's focal point
+        const f = (this.active && this.active.focus && this.active.focus.to) || this.cfg.camera?.focusPoint || [0, 1, 0];
+        const d = Math.hypot(f[0] - this.cam.x, f[1] - this.cam.y, f[2] - this.cam.z);
+        const st = this.dofState, close = this.mode === 'focus' || !!this.active;
+        st.focus = lerp(st.focus, d, 0.12);
+        st.aperture = lerp(st.aperture, close ? this.dof.focusAperture : this.dof.aperture, 0.08);
+        this.bokeh.uniforms.focus.value = st.focus;
+        this.bokeh.uniforms.aperture.value = st.aperture;
+      }
+      this.composer.render(dt);
+      // watchdog: average the first couple of seconds, bail out of post-processing if it is too slow
+      const pf = this.perf;
+      if (pf && t > 1.5) { pf.n++; pf.t += dt; if (pf.n === 90) { if (pf.t / pf.n > 0.045) this.degrade(); this.perf = null; } }
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   updateTween(dt) {
@@ -477,6 +577,7 @@ export class SceneEngine {
     const rect = this.stage.getBoundingClientRect();
     this.width = Math.max(1, Math.round(rect.width)); this.height = Math.max(1, Math.round(rect.height));
     this.renderer.setSize(this.width, this.height);
+    if (this.composer) { this.composer.setPixelRatio(this.renderer.getPixelRatio()); this.composer.setSize(this.width, this.height); }
     this.camera.aspect = this.width / this.height;
     this.camera.updateProjectionMatrix();
     if (this.mode === 'focus') { const s = this.panelShift(); this.shift.x = s.x; this.shift.y = s.y; }
