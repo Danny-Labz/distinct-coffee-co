@@ -127,6 +127,7 @@ New business types (salon, bakery, workshop…) mostly need a few new props adde
 
 ## Behaviour notes
 
+- "Recenter" (top bar, or the Home / R key) flies back to the opening view from anywhere.
 - Hotspot markers can be hidden with the "Dots" button; the tour chips always work.
 - Mobile: panel becomes a bottom sheet; the subject is shifted above it via `camera.setViewOffset`.
 - Falls back to a friendly message (with a link back to the main site) when WebGL is unavailable.

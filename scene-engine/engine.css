@@ -47,6 +47,7 @@
 }
 .se-btn:hover { background: rgba(10,10,10,.85); }
 .se-dots-toggle[aria-pressed="false"] { opacity: .55; }
+.se-recenter { display: inline-flex; align-items: center; gap: 7px; }
 
 /* ── tour chips ── */
 .se-chips {
@@ -133,5 +134,6 @@
   .se-focus .se-chips { opacity: 0; pointer-events: none; }
   .se-focus .se-panel { bottom: 16px; max-height: 50vh; }
   .se-btn { padding: 10px 12px; }
+  .se-recenter span { display: none; } .se-recenter { padding: 10px 11px; } .se-recenter svg { width: 14px; height: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .se-dot { animation: none; } .se-panel { transition: opacity .2s; } }

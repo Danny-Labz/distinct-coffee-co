@@ -354,6 +354,14 @@ export class SceneEngine {
     this.cfg.onOpen && this.cfg.onOpen(h);
   }
 
+  /** Fly back to the opening view (button in the top bar, or the Home / R key). */
+  recenter() {
+    this.returnPose = null;
+    this.vel.f = 0; this.vel.s = 0;
+    if (this.mode === 'focus') return this.closePanel();
+    this.flyTo(this.basePose, { shift: { x: 0, y: 0 }, duration: 0.9 });
+  }
+
   closePanel() {
     if (this.mode !== 'focus') return;
     this.mode = 'free';
@@ -551,6 +559,7 @@ export class SceneEngine {
     window.addEventListener('keydown', e => {
       if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
       if (e.code === 'Escape') { this.closePanel(); return; }
+      if (e.code === 'Home' || e.code === 'KeyR') { e.preventDefault(); this.recenter(); return; }
       if (this.mode === 'focus') {
         if (e.code === 'ArrowRight') { e.preventDefault(); this.step(1); }
         if (e.code === 'ArrowLeft') { e.preventDefault(); this.step(-1); }
@@ -593,6 +602,7 @@ export class SceneEngine {
       <header class="se-top">
         ${ui.logo ? `<a class="se-brand" href="${esc(ui.exit?.href || '/')}"><img src="${esc(ui.logo)}" alt="${esc(this.cfg.title || '')}"></a>` : `<span class="se-brand-text">${esc(this.cfg.title || '')}</span>`}
         <div class="se-top-r">
+          <button type="button" class="se-btn se-recenter" title="Back to the starting view"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span>Recenter</span></button>
           <button type="button" class="se-btn se-dots-toggle" aria-pressed="true" title="Show or hide the glowing dots">Dots</button>
           ${ui.exit ? `<a class="se-btn" href="${esc(ui.exit.href)}">${esc(ui.exit.label)}</a>` : ''}
         </div>
@@ -630,6 +640,7 @@ export class SceneEngine {
     });
     r.querySelector('.se-prev').addEventListener('click', () => this.step(-1));
     r.querySelector('.se-next').addEventListener('click', () => this.step(1));
+    r.querySelector('.se-recenter').addEventListener('click', () => this.recenter());
     const tgl = r.querySelector('.se-dots-toggle');
     tgl.addEventListener('click', () => { this.hideMarkers = !this.hideMarkers; tgl.setAttribute('aria-pressed', String(!this.hideMarkers)); });
   }
