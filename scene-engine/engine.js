@@ -295,8 +295,85 @@ export class SceneEngine {
     const ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
     const rc = this.raycaster || (this.raycaster = new THREE.Raycaster());
     rc.setFromCamera(ndc, this.camera);
-    const hit = rc.intersectObjects(this.proxies, false)[0];
-    return hit ? hit.object.userData.hotspot : null;
+    return this.bestHit(rc);
+  }
+
+  /**
+   * Hit boxes of neighbouring things overlap, so "first box hit" picks the wrong one. Among every box the ray
+   * passes through, take the one whose centre the ray passes closest to (relative to that box's size).
+   */
+  bestHit(rc) {
+    const hits = rc.intersectObjects(this.proxies, false);
+    let best = null, score = Infinity;
+    const v = this._bv || (this._bv = new THREE.Vector3());
+    for (const hit of hits) {
+      const o = hit.object;
+      if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+      const sc = rc.ray.distanceToPoint(v.copy(o.position)) / o.geometry.boundingSphere.radius;
+      if (sc < score) { score = sc; best = o; }
+    }
+    return best ? best.userData.hotspot : null;
+  }
+
+  /** What the centre-of-screen aim point is resting on. */
+  pickCenter() {
+    const rc = this.raycaster || (this.raycaster = new THREE.Raycaster());
+    rc.setFromCamera(this._zero || (this._zero = new THREE.Vector2(0, 0)), this.camera);
+    return this.bestHit(rc);
+  }
+
+  /**
+   * Aim point + quick-look popup. Whatever the reticle (or the mouse) rests on gets a small card with its
+   * summary; clicking the card, the object, or pressing Enter opens the full panel.
+   */
+  updateAim(dt) {
+    const free = this.mode === 'free' && !this.tween;
+    this.aimEl.classList.toggle('hide', !free || this.cfg.aim === false);
+    this.aimed = free && this.cfg.aim !== false ? this.pickCenter() : null;
+    const target = free ? (this.hovered || this.aimed) : null;
+    this.aimEl.classList.toggle('on', !!this.aimed);
+    // small dwell so the card doesn't flicker while sweeping across things
+    const st = this.popState || (this.popState = { cand: null, t: 0, gone: 0 });
+    if (target !== st.cand) { st.cand = target; st.t = 0; }
+    st.t += dt;
+    if (target && target !== this.popFor && st.t > (this.popFor ? 0.08 : 0.16)) this.showPop(target);
+    if (!target) { st.gone += dt; if (this.popFor && st.gone > 0.28) this.hidePop(); } else st.gone = 0;
+    if (!this.popFor) return;
+    // keep the card pinned above the object, inside the viewport
+    const v = (this._pv || (this._pv = new THREE.Vector3())).copy(this.popFor.anchor).project(this.camera);
+    const x = ((v.x + 1) / 2) * this.width, y = ((1 - v.y) / 2) * this.height;
+    const pw = this.pop.offsetWidth, ph = this.pop.offsetHeight, m = 12;
+    const side = y - ph - 30 < 64;                                    // no room above → sit beside the object instead
+    let px, py;
+    if (side) {
+      px = x + 46 + pw < this.width - m ? x + 46 : x - 46 - pw;
+      px = clamp(px, m, this.width - pw - m);
+      py = clamp(y - 24, 64, this.height - ph - 70);
+    } else {
+      px = clamp(x - pw / 2, m, this.width - pw - m);
+      py = y - ph - 30;
+    }
+    this.pop.style.transform = `translate(${Math.round(px)}px, ${Math.round(py)}px)`;
+    this.pop.classList.toggle('side', side);
+  }
+
+  showPop(h) {
+    this.popFor = h;
+    const p = h.panel || {};
+    let body = '';
+    try { body = typeof h.summary === 'function' ? h.summary({ ...this.makeContext(), data: this.data }) : (h.summary || ''); } catch (e) { console.warn(e); }
+    this.pop.querySelector('.se-pop-eyebrow').textContent = p.eyebrow || h.label;
+    this.pop.querySelector('.se-pop-title').textContent = p.title || h.label;
+    this.pop.querySelector('.se-pop-body').innerHTML = body;
+    this.pop.querySelector('.se-pop-more').textContent = this.coarse ? 'Tap for more →' : 'Click or press Enter for more →';
+    this.pop.classList.add('show');
+    this.root.classList.add('se-popping');
+  }
+
+  hidePop() {
+    this.popFor = null;
+    this.pop.classList.remove('show');
+    this.root.classList.remove('se-popping');
   }
 
   // ───────────────────────────── camera ─────────────────────────────
@@ -343,6 +420,7 @@ export class SceneEngine {
     if (this.mode === 'free') this.returnPose = { x: this.cam.x, y: this.cam.y, z: this.cam.z, yaw: this.cam.yaw, pitch: this.cam.pitch, fov: this.cam.fov };
     this.mode = 'focus';
     this.active = h;
+    this.hidePop();
     this.interacted = true; this.hint.classList.remove('show');
     this.root.classList.add('se-focus');
     this.hotspots.forEach(o => { o.chipEl?.classList.toggle('on', o === h); });
@@ -411,13 +489,15 @@ export class SceneEngine {
 
     // glow
     this.hotspots.forEach(h => {
-      const target = (h === this.hovered && this.mode === 'free') ? 1 : 0;
+      const target = ((h === this.hovered || h === this.aimed) && this.mode === 'free') ? 1 : 0;
       h.glow = lerp(h.glow, target, 0.16);
       const g = h.glow;
       h.mats.forEach(({ m, base, baseI }) => { m.emissive.setRGB(base.r + 0.30 * g, base.g + 0.26 * g, base.b + 0.2 * g); m.emissiveIntensity = baseI; });
     });
 
     this.applyCamera();
+    this.camera.updateMatrixWorld();
+    this.updateAim(dt);
     this.updateMarkers();
     if (this.composer) {
       if (this.bokeh) {
@@ -500,7 +580,7 @@ export class SceneEngine {
       if (!ok) { el.style.display = 'none'; return; }
       el.style.display = '';
       el.style.transform = `translate(${((v.x + 1) / 2) * this.width}px, ${((1 - v.y) / 2) * this.height}px) translate(-50%, -50%)`;
-      el.classList.toggle('hot', h === this.hovered);
+      el.classList.toggle('hot', h === this.hovered || h === this.aimed);
     });
   }
 
@@ -541,7 +621,7 @@ export class SceneEngine {
       down = null;
       el.style.cursor = this.hovered ? 'pointer' : 'grab';
       if (!wasClick || this.tween) return;
-      const h = this.pick(e.clientX, e.clientY);
+      const h = this.pick(e.clientX, e.clientY) || (e.pointerType === 'mouse' && this.mode === 'free' ? this.aimed : null);
       if (h) this.openHotspot(h);
       else if (this.mode === 'focus') this.closePanel();
     };
@@ -565,6 +645,7 @@ export class SceneEngine {
         if (e.code === 'ArrowLeft') { e.preventDefault(); this.step(-1); }
         return;
       }
+      if ((e.code === 'Enter' || e.code === 'Space') && !this.tween && (this.popFor || this.aimed) && !/BUTTON|A/.test(e.target.tagName)) { e.preventDefault(); this.openHotspot(this.popFor || this.aimed); return; }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
       this.keys.add(e.code);
     });
@@ -599,6 +680,8 @@ export class SceneEngine {
     r.innerHTML = `
       <div class="se-stage"></div>
       <div class="se-markers"></div>
+      <div class="se-aim" aria-hidden="true"><i></i></div>
+      <button type="button" class="se-pop" tabindex="-1"><span class="se-pop-eyebrow"></span><span class="se-pop-title"></span><span class="se-pop-body"></span><span class="se-pop-more"></span></button>
       <header class="se-top">
         ${ui.logo ? `<a class="se-brand" href="${esc(ui.exit?.href || '/')}"><img src="${esc(ui.logo)}" alt="${esc(this.cfg.title || '')}"></a>` : `<span class="se-brand-text">${esc(this.cfg.title || '')}</span>`}
         <div class="se-top-r">
@@ -617,12 +700,15 @@ export class SceneEngine {
         <div class="se-panel-body"></div>
       </aside>
       <div class="se-chips" role="toolbar" aria-label="Places to explore"></div>
-      <div class="se-hint">${this.coarse ? 'Drag to look around · tap the glowing dots' : 'Drag to look · ← ↑ ↓ → to walk · click the glowing dots'}</div>
+      <div class="se-hint">${this.coarse ? 'Drag to look · aim the circle at things' : 'Drag to look · ← ↑ ↓ → to walk · aim the circle at things'}</div>
       <div class="se-pad"><button data-key="ArrowUp" aria-label="Walk forward">▲</button><button data-key="ArrowDown" aria-label="Walk back">▼</button></div>
       <div class="se-loader">${ui.logo ? `<img src="${esc(ui.logo)}" alt="">` : ''}<div>${esc(ui.loading || 'Setting up…')}</div></div>
       <div class="se-fallback"></div>`;
     this.stage = r.querySelector('.se-stage');
     this.markerLayer = r.querySelector('.se-markers');
+    this.aimEl = r.querySelector('.se-aim');
+    this.pop = r.querySelector('.se-pop');
+    this.pop.addEventListener('click', () => { if (this.popFor) this.openHotspot(this.popFor); });
     this.panel = r.querySelector('.se-panel');
     this.panelBody = r.querySelector('.se-panel-body');
     this.panelCount = r.querySelector('.se-count');

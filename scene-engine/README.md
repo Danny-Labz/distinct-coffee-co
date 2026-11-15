@@ -76,6 +76,7 @@ export default {
 hotspot({
   id: 'menu',
   label: 'The Menu',               // chip + marker tooltip
+  summary: 'Short text or HTML',   // string or function → quick-look card shown when the visitor aims at it
   object: someMesh,                // glows on hover; its bounds are the click target
   marker: [x, y, z],               // where the pulsing dot floats
   hitPad: 0.05,                    // optional: grow the click target
@@ -127,6 +128,8 @@ New business types (salon, bakery, workshop…) mostly need a few new props adde
 
 ## Behaviour notes
 
+- An aim point sits in the centre of the view. Whatever it (or the mouse) rests on glows and shows a quick-look
+  card with the hotspot's `summary`; click/tap the card or press Enter for the full panel. Disable with `aim: false`.
 - "Recenter" (top bar, or the Home / R key) flies back to the opening view from anywhere.
 - Hotspot markers can be hidden with the "Dots" button; the tour chips always work.
 - Mobile: panel becomes a bottom sheet; the subject is shifted above it via `camera.setViewOffset`.

@@ -225,6 +225,7 @@ export default {
 
     hotspot({
       id: 'menu', label: 'The Menu', object: tablet, marker: [-0.4, Y + 0.37, 0.06],
+      summary: () => menu.length ? menu.slice(0, 5).map(m => `<div class="r"><b>${esc(m.name)}</b><span>${money(m.price_cents)}</span></div>`).join('') + (menu.length > 5 ? `<em>+ ${menu.length - 5} more</em>` : '') : 'Updated before every event.',
       focus: { from: [-0.4, Y + 0.33, 0.8], to: [-0.4, Y + 0.17, 0.05], fov: 40 },
       panel: {
         eyebrow: 'The Menu', title: 'Crafted with intention',
@@ -240,6 +241,7 @@ export default {
 
     hotspot({
       id: 'espresso', label: 'Espresso', object: machine, marker: [0.74, Y + 0.5, 0.0],
+      summary: 'Every drink starts with a freshly pulled shot — lattes, cappuccinos, cortados and more.',
       focus: { from: [0.5, Y + 0.36, 1.05], to: [0.7, Y + 0.2, -0.03], fov: 38 },
       panel: {
         eyebrow: 'The Espresso', title: 'Pulled fresh, made to order',
@@ -250,6 +252,7 @@ export default {
 
     hotspot({
       id: 'beans', label: 'The Beans', object: jar, marker: [-0.1, Y + 0.34, -0.03],
+      summary: 'Medium-dark roast from Colombia, Brazil and Nicaragua. Milk chocolate, stone fruit, hazelnut.',
       focus: { from: [-0.06, Y + 0.27, 0.74], to: [-0.1, Y + 0.13, -0.03], fov: 36 },
       panel: {
         eyebrow: 'The Beans', title: 'Harmony Blend',
@@ -260,6 +263,7 @@ export default {
 
     hotspot({
       id: 'coldbrew', label: 'Cold Brew', object: pot, marker: [0.2, Y + 0.3, -0.07],
+      summary: 'Cold brew, iced lattes, matcha and iced teas — poured cold for warm afternoons.',
       focus: { from: [0.16, Y + 0.36, 0.9], to: [0.16, Y + 0.12, 0.0], fov: 40 },
       panel: {
         eyebrow: 'Cold Brew & Iced', title: 'Made for warm days',
@@ -270,6 +274,7 @@ export default {
 
     hotspot({
       id: 'syrups', label: 'Syrups & Milks', object: syrups, marker: [0.505, Y + 0.42, 0.2],
+      summary: () => { const names = t => addons.filter(a => a.type === t).map(a => esc(a.name)).join(' · '); const sy = names('syrup'), mi = names('milk'); return (sy || mi) ? `${sy ? `<div><b>Syrups</b> ${sy}</div>` : ''}${mi ? `<div><b>Milks</b> ${mi}</div>` : ''}` : 'Pick your milk and add a syrup to make it yours.'; },
       focus: { from: [0.46, Y + 0.3, 0.95], to: [0.505, Y + 0.16, 0.2], fov: 36 },
       panel: {
         eyebrow: 'Make it yours', title: 'Syrups & milks',
@@ -286,6 +291,7 @@ export default {
 
     hotspot({
       id: 'story', label: 'Our Story', object: cart.userData.plate, hitPad: 0.04,
+      summary: 'Handcrafted specialty coffee with an emphasis on quality, simplicity and connection.',
       focus: { from: [0, 0.95, 2.25], to: [0, 0.56, 0.4], fov: 44 },
       panel: {
         eyebrow: 'Our Story', title: 'More than coffee.',
@@ -296,6 +302,7 @@ export default {
 
     hotspot({
       id: 'events', label: 'Find Us', object: lantern, marker: [0, 2.52, -0.3], hitPad: 0.14,
+      summary: () => events.length ? `<b>${esc(events[0].name)}</b><br>${esc(events[0].date || '')}${events[0].location ? ' · ' + esc(events[0].location) : ''}${events.length > 1 ? `<br><em>+ ${events.length - 1} more</em>` : ''}` : 'Our next pop-up is being planned — follow along for dates.',
       focus: { from: [0, 1.55, 1.9], to: [0, 2.32, -0.3], fov: 50 },
       panel: {
         eyebrow: 'Where we’ll be', title: events.length ? 'Upcoming events' : 'Something distinct is brewing',
@@ -308,6 +315,7 @@ export default {
 
     hotspot({
       id: 'order', label: 'Order Ahead', object: aframe, marker: [1.55, 1.05, 1.6],
+      summary: 'Pre-order and pay online, or scan the QR at the cart — we’ll call your name.',
       focus: { from: [1.1, 0.9, 2.9], to: [1.52, 0.5, 1.6], fov: 44 },
       panel: {
         eyebrow: 'Skip the line', title: 'Order ahead',
@@ -318,6 +326,7 @@ export default {
 
     hotspot({
       id: 'loyalty', label: 'Rewards', object: lcard, marker: [-0.02, Y + 0.15, 0.31], hitPad: 0.04,
+      summary: 'Every drink earns a punch. Fill the card and one is on us.',
       focus: { from: [0.04, Y + 0.26, 0.82], to: [-0.02, Y + 0.06, 0.31], fov: 32 },
       panel: {
         eyebrow: 'Rewards', title: 'Every drink counts',
@@ -328,6 +337,7 @@ export default {
 
     hotspot({
       id: 'book', label: 'Book Us', object: service, marker: [-0.9, Y + 0.48, 0.06], hitPad: 0.02,
+      summary: 'We bring the café to you — corporate events, weddings and private parties.',
       focus: { from: [-0.86, Y + 0.36, 1.0], to: [-0.95, Y + 0.16, 0.15], fov: 38 },
       panel: {
         eyebrow: 'Catering', title: 'Your event, our cart',
