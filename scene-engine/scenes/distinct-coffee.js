@@ -138,8 +138,8 @@ export default {
 
   camera: {
     fov: 50,
-    start: { from: [0.2, 1.55, 2.85], to: [0, 1.0, 0] },
-    startPortrait: { from: [0.2, 1.6, 3.9], to: [0, 1.12, 0] },
+    start: { from: [0.15, 1.72, 4.0], to: [0, 1.58, -0.3] },          // aim rests above the counter, on nothing
+    startPortrait: { from: [0.15, 1.75, 4.3], to: [0, 1.62, -0.3] },
     focusPoint: [0, 1.05, 0.2],
     bounds: { minX: -3.4, maxX: 3.4, minZ: 1.5, maxZ: 6.5 },
     colliders: [{ minX: 1.2, maxX: 1.95, minZ: 1.15, maxZ: 2.05 }],   // the A-frame sign
