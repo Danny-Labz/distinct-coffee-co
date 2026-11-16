@@ -92,6 +92,20 @@ function drawChalk(ctx, w, h, logo) {
   for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) if ((x * 7 + y * 13 + x * y) % 3 === 0 || (x < 3 && y < 3) || (x > 5 && y < 3) || (x < 3 && y > 5)) ctx.fillRect(w / 2 - 54 + x * 12, 406 + y * 12, 10, 10);
 }
 
+function drawFollow(ctx, w, h) {
+  ctx.fillStyle = '#141414'; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 3; ctx.strokeRect(18, 18, w - 36, h - 36);
+  ctx.textAlign = 'center'; ctx.fillStyle = '#f6f5f2';
+  ctx.font = '800 58px Montserrat, sans-serif'; ctx.fillText('FOLLOW US', w / 2, 150);
+  ctx.font = '300 40px Montserrat, sans-serif'; ctx.fillText('on Instagram', w / 2, 210);
+  ctx.fillRect(w * 0.3, 250, w * 0.4, 3);
+  ctx.font = '700 36px Montserrat, sans-serif'; ctx.fillText('@distinct.coffeeco', w / 2, 340);
+  ctx.font = '600 21px Montserrat, sans-serif';
+  ['POP-UP DATES & LOCATIONS', 'NEW DRINKS FIRST', 'BEHIND THE CART'].forEach((t, i) => ctx.fillText(t, w / 2, 430 + i * 44));
+  ctx.fillRect(w * 0.3, 580, w * 0.4, 3);
+  ctx.font = '300 30px Montserrat, sans-serif'; ctx.fillText('tag us in your cup', w / 2, 650);
+}
+
 function drawLoyalty(ctx, w, h) {
   ctx.fillStyle = '#f6f5f2'; ctx.fillRect(0, 0, w, h);
   ctx.fillStyle = '#0a0a0a'; ctx.font = '700 22px Montserrat, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('LOYALTY CARD', w / 2, 40);
@@ -142,7 +156,7 @@ export default {
     startPortrait: { from: [0.15, 1.75, 4.3], to: [0, 1.62, -0.3] },
     focusPoint: [0, 1.05, 0.2],
     bounds: { minX: -3.4, maxX: 3.4, minZ: 1.5, maxZ: 6.5 },
-    colliders: [{ minX: 1.2, maxX: 1.95, minZ: 1.15, maxZ: 2.05 }],   // the A-frame sign
+    colliders: [{ minX: 1.2, maxX: 1.95, minZ: 1.15, maxZ: 2.05 }, { minX: -1.95, maxX: -1.2, minZ: 1.15, maxZ: 2.05 }],   // the two A-frame signs
     lookYaw: 105, lookPitch: 36, speed: 1.7,
   },
 
@@ -165,7 +179,7 @@ export default {
 
     // ── lawn + trees (the HDR panorama supplies sky, horizon and light) ──
     const tl = new THREE.TextureLoader();
-    const lawn = H.lawn({ map: tl.load('scene-engine/assets/textures/grass.jpg'), normalMap: tl.load('scene-engine/assets/textures/grass-nm.jpg'), tint: 0xe6dcc0, exclude: [{ minX: -1.2, maxX: 1.2, minZ: -0.48, maxZ: 0.48 }, { minX: 1.25, maxX: 1.9, minZ: 1.25, maxZ: 1.95 }] });
+    const lawn = H.lawn({ map: tl.load('scene-engine/assets/textures/grass.jpg'), normalMap: tl.load('scene-engine/assets/textures/grass-nm.jpg'), tint: 0xe6dcc0, exclude: [{ minX: -1.2, maxX: 1.2, minZ: -0.48, maxZ: 0.48 }, { minX: 1.25, maxX: 1.9, minZ: 1.25, maxZ: 1.95 }, { minX: -1.9, maxX: -1.25, minZ: 1.25, maxZ: 1.95 }] });
     scene.add(lawn.group);
     animate((dt, t) => lawn.update(t));
     // individual trees only where depth-of-field can blur them; phones get the hazy tree line alone
@@ -217,6 +231,8 @@ export default {
     // A-frame + pendant light
     const aframe = H.aFrame({ face: P.canvasTex(512, 800, (c, w, h) => drawChalk(c, w, h)) });
     aframe.position.set(1.55, 0, 1.6); aframe.rotation.y = -0.5; scene.add(aframe);
+    const igSign = H.aFrame({ face: P.canvasTex(512, 800, (c, w, h) => drawFollow(c, w, h)) });
+    igSign.position.set(-1.55, 0, 1.6); igSign.rotation.y = 0.5; scene.add(igSign);
     const lantern = H.pendant({ drop: 0.33 }); lantern.position.set(0, 2.35, -0.3); scene.add(lantern);
     const warm = new THREE.PointLight(0xffdfb0, 0.5, 4, 2); warm.position.set(0, 2.3, -0.3); scene.add(warm);
 
@@ -321,6 +337,17 @@ export default {
         eyebrow: 'Skip the line', title: 'Order ahead',
         html: () => '<p>Pre-order for an upcoming event and pay online, or reserve and pay at the event. At the cart, scan the QR code to order and pay from your phone — then we’ll call your name.</p>',
         ctas: [{ label: 'Pre-order now', href: orderHref }],
+      },
+    });
+
+    hotspot({
+      id: 'instagram', label: 'Instagram', object: igSign, marker: [-1.55, 1.05, 1.6],
+      summary: 'Follow @distinct.coffeeco for pop-up dates, new drinks and behind-the-cart moments.',
+      focus: { from: [-1.1, 0.9, 2.9], to: [-1.52, 0.5, 1.6], fov: 44 },
+      panel: {
+        eyebrow: 'Stay in the loop', title: 'Follow us on Instagram',
+        html: () => '<p>Instagram is where we post first — where the cart is popping up next, new and seasonal drinks, and what goes on behind the cart.</p><p>Follow <b>@distinct.coffeeco</b>, and tag us in your cup. We love sharing yours.</p>',
+        ctas: [{ label: 'Open Instagram', href: 'https://instagram.com/distinct.coffeeco', external: true }],
       },
     });
 
