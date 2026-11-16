@@ -424,7 +424,10 @@ export class SceneEngine {
     this.interacted = true; this.hint.classList.remove('show');
     this.root.classList.add('se-focus');
     this.hotspots.forEach(o => { o.chipEl?.classList.toggle('on', o === h); });
-    h.chipEl?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: this.reduceMotion ? 'auto' : 'smooth' });
+    // Centre the chip by scrolling the chip bar itself. (scrollIntoView also pans the whole page on iOS,
+    // which slid the scene off-screen for chips far along the row.)
+    const bar = h.chipEl && h.chipEl.parentElement;
+    if (bar) bar.scrollTo({ left: h.chipEl.offsetLeft - (bar.clientWidth - h.chipEl.offsetWidth) / 2, behavior: this.reduceMotion ? 'auto' : 'smooth' });
     const f = h.focus || {};
     const pose = f.from && f.to ? poseLook(f.from, f.to, f.fov ?? 40) : this.returnPose;
     this.flyTo(pose, { shift: this.panelShift() });
@@ -652,6 +655,8 @@ export class SceneEngine {
     window.addEventListener('keyup', e => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
     window.addEventListener('resize', () => this.resize());
+    const pin = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); if (this.root.scrollLeft || this.root.scrollTop) { this.root.scrollLeft = 0; this.root.scrollTop = 0; } };
+    window.addEventListener('scroll', pin, { passive: true }); this.root.addEventListener('scroll', pin, { passive: true });
 
     // on-screen walk pad for touch devices
     this.pad.querySelectorAll('button').forEach(b => {
