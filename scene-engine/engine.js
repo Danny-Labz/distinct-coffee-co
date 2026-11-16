@@ -78,9 +78,20 @@ export class SceneEngine {
     if (!this.renderer.getContext()) return this.showFallback();
 
     const r = this.renderer;
+    this.noDegrade = new URLSearchParams(location.search).has('nodegrade');
     // quality tier: 'high' = HDR lighting + post-processing + real glass; 'low' = phones / weak GPUs
     const q = new URLSearchParams(location.search).get('quality');
-    this.quality = q === 'low' || q === 'high' ? q : (this.cfg.quality || (this.coarse ? 'low' : 'high'));
+    // a device that struggled (or lost its WebGL context) on an earlier visit starts light next time
+    let saved = 0; try { saved = +localStorage.getItem('se-tier') || 0; if (q === 'high') localStorage.removeItem('se-tier'); } catch (e) { /* storage blocked */ }
+    this.tier = q === 'high' ? 0 : Math.min(saved, 1);      // start light, then let the watchdog re-measure
+    this.quality = q === 'low' || q === 'high' ? q : (this.cfg.quality || (this.coarse || saved ? 'low' : 'high'));
+    document.addEventListener('visibilitychange', () => { this._skipSample = true; });
+    r.domElement.addEventListener('webglcontextlost', e => {
+      // the GPU gave up (usually out of memory): remember that and restart once in the light mode
+      e.preventDefault();
+      try { localStorage.setItem('se-tier', '2'); if (!sessionStorage.getItem('se-reloaded')) { sessionStorage.setItem('se-reloaded', '1'); location.reload(); return; } } catch (err) { /* ignore */ }
+      this.showFallback();
+    });
     hd.setQuality(this.quality);
     this.maxDpr = 1.5;
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.maxDpr));
@@ -217,17 +228,30 @@ export class SceneEngine {
     }
     c.addPass(new OutputPass());
     this.composer = c;
-    this.perf = qs.has('nodegrade') ? null : { n: 0, t: 0 };
   }
 
-  /** Drop to plain rendering if the device can't keep up. */
+  /**
+   * Step the rendering load down one notch. Called by the frame-rate watchdog, so a slow machine settles on
+   * something smooth within a second or two instead of sitting on a frozen picture.
+   *   1 → no post-processing   2 → lower resolution, smaller shadows, thinner grass   3 → minimum
+   */
   degrade() {
-    if (!this.composer) return;
-    console.info('[scene] low frame rate — switching off post-processing');
-    this.composer.dispose?.(); this.composer = null; this.bokeh = null;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+    if (this.tier >= 3) return;
+    this.tier++;
+    console.info('[scene] low frame rate — stepping quality down to level', this.tier);
+    try { localStorage.setItem('se-tier', String(this.tier)); } catch (e) { /* ignore */ }
+    if (this.composer) { try { this.composer.dispose?.(); } catch (e) { /* ignore */ } this.composer = null; this.bokeh = null; }
+    const dpr = window.devicePixelRatio || 1;
+    this.renderer.setPixelRatio(Math.min(dpr, this.tier === 1 ? 1.25 : this.tier === 2 ? 1 : 0.75));
+    if (this.tier >= 2 && this.sun) {
+      const sh = this.sun.shadow;
+      if (this.tier === 2) { sh.mapSize.set(2048, 2048); if (sh.map) { sh.map.dispose(); sh.map = null; } }
+      else { this.sun.castShadow = false; }
+      if (!this._thinned) { this._thinned = true; this.scene.traverse(o => { if (o.isInstancedMesh && o.userData.noDofDepth) o.count = Math.floor(o.count / 3); }); }
+    }
     this.resize();
   }
+
 
   // ───────────────────────────── hotspots ─────────────────────────────
   addHotspot(def) {
@@ -480,6 +504,15 @@ export class SceneEngine {
   frame() {
     const dt = Math.min(0.05, this.clock.getDelta());
     const t = this.clock.elapsedTime;
+    // frame-rate watchdog (real time, not the clamped dt): judge every 20 frames, step down while it is slow
+    const now = performance.now(), raw = now - (this._lastFrame || now); this._lastFrame = now;
+    if (this._skipSample || document.hidden) { this._skipSample = false; }                // just came back from a hidden tab
+    else if (!this.noDegrade && t > 0.8 && raw > 0) {
+      const w = this.watch || (this.watch = { n: 0, t: 0, slow: 0 });
+      w.n++; w.t += raw; if (raw > 42) w.slow++;
+      // "slow" = most frames in the window are slow, so a one-off hitch (shader compile, tab switch) doesn't count
+      if (w.n >= 20 || w.t > 2500) { if (w.slow / w.n > 0.6) this.degrade(); w.n = 0; w.t = 0; w.slow = 0; }
+    }
     this.updateTween(dt);
     if (this.mode === 'free' && !this.tween) this.updateFree(dt);
 
@@ -513,10 +546,7 @@ export class SceneEngine {
         this.bokeh.uniforms.focus.value = st.focus;
         this.bokeh.uniforms.aperture.value = st.aperture;
       }
-      this.composer.render(dt);
-      // watchdog: average the first couple of seconds, bail out of post-processing if it is too slow
-      const pf = this.perf;
-      if (pf && t > 1.5) { pf.n++; pf.t += dt; if (pf.n === 90) { if (pf.t / pf.n > 0.045) this.degrade(); this.perf = null; } }
+      try { this.composer.render(dt); } catch (e) { console.error('[scene] post-processing failed', e); this.degrade(); }
     } else {
       this.renderer.render(this.scene, this.camera);
     }

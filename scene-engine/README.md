@@ -97,11 +97,13 @@ Inside panel HTML, `<a data-hotspot="events">…</a>` jumps to another hotspot. 
 Two tiers, picked automatically (override with `?quality=high|low` in the URL):
 
 - **high** (desktop): HDR image-based lighting, 4096 soft shadows, ambient occlusion, depth of field that follows
-  the camera's focus, bloom, filmic tone mapping, true refractive glass. If the first ~90 frames average under
-  ~22 fps the engine drops post-processing by itself.
+  the camera's focus, bloom, filmic tone mapping, true refractive glass.
+  A frame-rate watchdog runs the whole time: if most frames in a 20-frame window take over ~42 ms it steps down
+  (1: no post-processing → 2: lower resolution, smaller shadows, thinner grass → 3: minimum). The result is
+  remembered in `localStorage` (`se-tier`) so the next visit starts light; a lost WebGL context reloads once in light mode.
 - **low** (touch devices): same HDR lighting, materials and models; no post-processing, cheaper glass, less grass.
 
-Debug switches: `?off=ao,dof,bloom` (or `?off=post`), `?nodegrade`.
+Debug switches: `?off=ao,dof,bloom` (or `?off=post`), `?nodegrade`, `?quality=high` (also clears the remembered tier).
 Objects can opt out of helper passes with `userData.noAO` / `userData.noDofDepth`.
 
 To relight a scene, swap `world.hdr` for another equirectangular `.hdr` (Poly Haven has free CC0 ones — a 1k file
